@@ -1,27 +1,44 @@
 ---
 name: physics-agent-orchestrator
-description: '物理题的 6 节点 pipeline 路由器：题目属于物理分析、理论推导、大学物理教学阐释、数值建模或竞赛研究类，且需要按结构化流水线执行时，先读这份 skill 判断当前该进入哪个节点、以及该节点必须按需调用 skill_read 读取哪份具体子 skill。无论题目是开放性科研探索还是具备标准解析解的课内多问推导，均适用本流水线。触发信号 = 物理题目性质，不是用户是否点名。'
+description: '物理题的双模式分流与流水线路由器：收到任何物理习题、课内作业指导、理论推导、大学物理概念阐释、或者 UPC 等物理竞赛建模与数值分析任务时，先读本 Skill 判断进入哪种模式（Mode A 课内作业辅导 vs Mode B 竞赛科研攻坚），并按需调用 skill 加载对应子 Skill。'
 ---
 
-# Physics Agent 节点级 Skill 路由表（1 主 Skill + 8 子 Skill）
+# Physics Agent 双模式分流与子 Skill 路由表
 
-收到任何物理分析、理论推导、课内教学阐释或数值求解任务（涵盖开放性科研探索题与经典大学物理标准推导题）时，严禁凭直觉自由跳步。请先通过 `skill_read` 加载主控协议，并在进入对应阶段前按需调用 `skill_read` 读取对应子 Skill：
+收到任何物理分析、课内作业、理论推导、概念教学阐释、数值求解或竞赛建模任务时，严禁凭直觉自由跳步或口算数值。请先通过 `skill(name="...")` 读取对应规则。
 
-1. **全局主控与 Node 4 渲染/交付闭环**：`physics-agent-governance`
-   - 收到任务时首先读取，掌握全局 6 节点流水线、参考答案隔离（§5，严禁读取 `dev-notes/` 作为答案来源）及 Node 4 交付前强制自检循环（`skill_bom_check.py` + `report_quality_check.py`）。
-2. **Node 0 状态检查与任务专属目录初始化**：`physics-state-check`
-   - 创建 `physics-agent/runtime/<task-slug>/problem_state.json` 并写入 `session_key`；所有任务产物统一放进 `<task-slug>/` 子目录（详见 `physics-agent/knowledge/path_convention.md`）。
-3. **三条确定性防线（量纲门 / 边界门 / 配额退火）**：`physics-defense-lines`
-   - 进入数值求解前必读，确保 `dimensional_gate.py` 与 `boundary_gate.py` 真实跑通。
-4. **Node 1 / 1.5 / 2a / 2b 核心建模与验证流水线**：`physics-pipeline`
-   - 涵盖任务规范（Node 1 提炼一句话核心目标；支持复合多小问解构，课内理论推导题安全约束自然填 N/A）、数据源路由（Node 1.5，基础物理常数优先直接调用标准库或教材公称参数，无需外部网络爬虫；外部复杂数据按权威三档分类与决策树选用并支持 TUN 代理自适应底层穿透）、知识模板与机理核验（Node 2a，防"张冠李戴"；无特定预置模板的基础物理领域直接依据第一性物理定律与 `physics_research_methodology.md` 展开推导）、独立求解与多维验证（Node 2b，支持极限退化检验、解析与数值残差比对、多判据交叉互证等多重严谨理论物理验证范式）。
-5. **审计留痕与中文运行记录资产**：`physics-auditability`
-   - 每次修改状态或运行脚本后必读：执行写回读回校验、调用 `audit_log.py`（`args.note` 必须为面向用户的简体中文，严禁英文或开发黑话）及 `runlog.py` 生成 `<task-slug>/runlogs/<artifact_id>.txt`。
-6. **Node 2.7 数值结果绘图与 Node 4 公式/图表自包含内联**：`physics-report-charting`
-   - 决定是否绘制静态/交互图表（`make_report_figures.py`），并确保 Node 4 渲染单文件 HTML 时 100% 离线内联数学公式与图表。
-7. **Node 3 增量研究汇报写作与七条行文铁律**：`physics-report-writing`
-   - 在每个节点结束时向 `physics-agent/runtime/<task-slug>/report.md` 增量追加章节，严格遵守 `report_structure_guide.md` 八章结构与七条约束（复合多问与教学推导题按二级小节递进组织，优缺点章自适应采用“理论假设与适用局限”，严禁任何行内元导语、自我标榜与内部字段名透传）。
-8. **权限缺口与便携运行时快路径（§4 / §4a）**：`physics-permission-shortfall`
-   - 遇到写权限受阻或 Python 依赖缺失时必读，优先使用 `physics-agent/third_party/portable-runtime/`。
-9. **外部文档按需解析（§6，PDF/扫描件/DOCX）**：`physics-doc-parsing`
-   - 仅当用户明确要求解析外部文档时按需读取。
+---
+
+## 一、 双任务模式智能分流（Dual-Mode Routing）
+
+根据用户的任务性质与提问意图，自动匹配最佳解题路径：
+
+| 任务模式 | 典型场景 | 核心关注点 | 交付形态 | 推荐子 Skill 链路 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Mode A：平时作业与课内学习指导模式**<br>*(Homework & Learning Mode)* | • 大学物理教材课后习题<br>• 期末/考研物理典型真题<br>• 定理证明与分步解析推导<br>• 概念混淆辨析与易错点剖析 | • 物理图像与受力/场图阐释<br>• 严谨清晰的逐步代数推导<br>• 揭示解题思路与常见思维陷阱<br>• 提供独立边界检验与验算 | • **直接在会话窗优雅呈现**<br>• 标准 LaTeX 规范数学公式<br>• 重点步骤物理依据明晰<br>• 可选轻量 Python 仿真验算 | 1. `physics-pipeline`<br>2. `physics-defense-lines`（选）<br>3. `physics-report-writing`（作业辅导规范） |
+| **Mode B：UPC 竞赛与科研攻坚模式**<br>*(UPC & Competition Mode)* | • 国际大学生物理竞赛 (UPC)<br>• 开放性复杂现实物理系统建模<br>• 现实多因素耦合与微分方程组求解<br>• 参数敏感性与无量纲场分析 | • 第一性原理拆解与目标提炼<br>• 费米数量级先行估算<br>• 最简基线模型（V0.1）优先<br>• 确定性三道物理防线拦截<br>• 超越单一数字的五大科研深度 | • **离线交互式科研学术报告**<br>• 100% 离线自包含单文件 HTML<br>• 八章标准学术论文结构<br>• 外挂胶囊图例矢量科学图表<br>• 毫秒级时序可穿透审计账本 | 完整 6 节点流水线：<br>1. `physics-agent-governance`<br>2. `physics-state-check`<br>3. `physics-pipeline`<br>4. `physics-defense-lines`<br>5. `physics-auditability`<br>6. `physics-report-charting`<br>7. `physics-report-writing` |
+
+---
+
+## 二、 1 主控 + 8 专业子 Skill 路由清单
+
+在对应阶段前按需调用 `skill(name="...")` 加载具体子 Skill：
+
+1. **全局主控协议与交付闭环**：`physics-agent-governance`
+   - 全局生命周期治理协议、环境防线、以及 Node 4 质量自检循环；
+2. **Node 0 任务专属状态机与环境初始化**：`physics-state-check`
+   - 在 `physics-agent/runtime/<task-slug>/problem_state.json` 中初始化状态真源，隔绝不同题目上下文；
+3. **确定性三道物理防线（量纲门 / 边界门 / 配额退火）**：`physics-defense-lines`
+   - 杜绝大模型数值幻觉与量纲错误，强制运行 `dimensional_gate.py` 与 `boundary_gate.py`；
+4. **核心物理建模、算法求解与多维验证流水线**：`physics-pipeline`
+   - 涵盖第一性问题拆解、费米数量级先行估算、权威物理常数选用、八大物理板块算法工具谱系、以及超越单一数字的五大物理研究深度；
+5. **审计留痕与运行记录资产**：`physics-auditability`
+   - 单一状态真源写回校验、调用 `audit_log.py` 记录简体中文说明、现场脚本运行记录 `runlog.py` 生成；
+6. **科学结果绘图与公式/图表内联**：`physics-report-charting`
+   - 涵盖 9 种科研级静态图表（曲线、散点、柱状、热力场、3D 轨迹/曲面等）与交互图表，零遮挡图例设计；
+7. **科学汇报撰写与教学推导组织**：`physics-report-writing`
+   - 支持课内作业分步解答行文规范，以及科研学术报告八章标准结构与七条行文铁律；
+8. **环境缺口与便携运行时自愈**：`physics-permission-shortfall`
+   - 遇到 Windows Sandbox 权限限制或环境依赖缺失时的自愈与标准提权流程；
+9. **外部文档解析（PDF/扫描件/DOCX）**：`physics-doc-parsing`
+   - 仅当用户明确要求“参考某个文件/文档”时按需加载。

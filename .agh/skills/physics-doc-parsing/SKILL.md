@@ -1,23 +1,35 @@
 ---
 name: physics-doc-parsing
-description: '用户明确指向一个自己读不了的文档（PDF/扫描图/docx，“参考这个文件”类信号）时按此触发；不是每个物理任务都要读，问题本身难不构成触发条件，只有用户指向文件才触发。'
+description: '外部文档按需解析：仅当用户明确要求“参考此文件/文档”（PDF/Word/扫描图像）时触发，支持 DSH 工具分流与公式表格高精度提取。'
 ---
 
-### User-Specified Document Parsing (On-Demand, Not a Fixed Pipeline Step)
+### User-Specified Document Parsing (On-Demand)
 
-This rule is **NOT part of the 6-node pipeline above** — it has no Node number, it does not run on agent startup, and it does not run on every problem. It only fires on one trigger: **the user explicitly asks the agent to consult a file it cannot read as plain text on its own** (a PDF, a scanned image, a docx, etc. that the user says "参考这个文件" / "read this PDF" / "work from this document"). If the user only pastes the problem statement as plain text in the conversation, this section never applies — do not reach for a document-parsing tool just because a problem is hard; difficulty of the physics is not the trigger, the user pointing at a file is.
+本规则**不是固定流水线节点**，默认不触发。仅当用户明确指示“参考这个文件”、“读这篇论文”、“看这道题的配图”时按需触发。若用户直接在聊天窗粘贴纯文本题目，绝不调用此规则。
 
-When the trigger fires, the **first fork is by file source, not by tier**:
+---
 
-**A. The file arrives as a session attachment** (user uploaded it through the AGH session page's attachment input — the agent sees it as a `session-file://<seq>/<index>` reference, listable via `read session-file://list`):
-1. **Tier 0 (zero local dependencies, always try first in this branch) — official `document_read` plugin tool**: reads `session-file://` attachments directly, no `pip install` of any local Python parser package needed. Supports PDF (embedded text; offline OCR for scanned pages, `chi_sim` default / `eng` optional), DOC/DOCX, ZIP (list names first, then pass an exact `entry`), and plain text. **Limits that do not change on a version upgrade**: it reads one selected PDF page at a time (no "whole document in one call" interface), has no equation-structure understanding (equation regions come back as scattered, unreadable characters, same tier as Tier 1 below, not better), and cannot retrieve the original uploaded file's bytes back to disk — there is no official command that exports a session attachment's raw PDF bytes out to a filesystem path (the attachment lives in the session ledger, and `session export` deliberately omits binary attachment bytes, not an oversight). So Tier 0 is a **fast free-text/table pre-read** on an attachment, not a replacement for Tier 2's equation understanding, and it cannot be used to make Tier 2 "read the attachment directly" — it has no disk path to hand over (see the "attachment → disk" caveat below).
-2. If, after inspecting Tier 0's output, the corrupted/unreadable regions sit exactly on content that matters for the physics (equations that carry the key numeric result, a key table the answer depends on, or a figure the report will have to interpret), and the file is an attachment rather than a disk file, **there is currently no automatic path to hand it to MinerU** (MinerU reads a disk path; Tier 0 can only hand back "already-parsed text/page images", not the original bytes). In this case the agent must stop and ask the user: **(A)** "please save the same file to a path in this workspace (or give me an existing disk path for it) and I will run Tier 2 on that path", or **(B)** "if you can tolerate it, I will work from Tier 0's text-only output and explicitly flag in the report which equation/table regions I could not verify" — the agent does not pick B for the user, and does not fabricate a "落盘" step that does not actually exist (see caveat below).
+## 一、 DeepSeek Harness 多模态与文件解析路由
 
-**B. The file is given as a local disk path** (user says "我把文件放在 XX 目录里了，你去读" — no attachment upload involved):
-1. **Tier 1 (default, always try first in this branch) — PyMuPDF4LLM**: extract the document to markdown with `pymupdf4llm.to_markdown(<path>)`. This covers plain text, heading structure, and table layouts; it does **not** understand equations (equation regions come back as scattered, unreadable characters, not LaTeX). Speed is seconds per document (no GPU needed). If this machine does not have PyMuPDF4LLM under the system `python`, first check `physics-agent/third_party/portable-runtime/wheels/` (see `PORTABLE_RUNTIME.md`) — PyMuPDF4LLM is an optional wheel in that bundle; use the portable interpreter's `python.exe -m pip install --target` to wire it up offline, no network download. `pypdf` was evaluated and deliberately **not** adopted as a separate tier — it produces plain text only (no table/image handling), is strictly weaker than PyMuPDF4LLM on every measured axis, and keeping it in the protocol would add a needless "which of these two?" decision on every trigger; it should not appear as an option in this protocol. Full install/invocation details, including a known encoding quirk that only fires on documents using mathematical-fraktur or similar symbol fonts (replace isolated UTF-16 surrogates with `?` before writing the string to disk, only if/when you actually hit the resulting `UnicodeEncodeError` — this is not a step to run proactively every time), live in `physics-agent/parser_requirements.md`; read that file once when you first need to, not as a per-run checklist.
-2. **Tier 2 (fallback only, evidence-triggered) — MinerU (`basic` tier, local)**: if, after inspecting Tier 1's output, the corrupted/unreadable regions turn out to sit exactly on content that matters for the physics, invoke MinerU's `basic` tier instead. **Speed note (verified, not assumed)**: `mineru-kit parse` supports a `--pages` argument (`'1-5,8'`, `'r3-r1'` for counting from the end, or `'all'`, default `all`) — when you already know from Tier 1's output **which specific pages** carry the unreadable equations/tables, pass just those page numbers to `--pages` instead of re-parsing the whole document; this is the "定点补全" path (a few pages instead of the full 75–340 s whole-document run). This is slower than Tier 1 in the full-document case and is the only local option that actually recovers equations as readable LaTeX; it is kept as a **fallback tool**, not the default path, precisely so the common case (document's important content survives Tier 1 fine) never pays that cost. Which specific MinerU subcommand to call, why a different broken-sounding sibling path must not be used, and (not yet verified, marked below) whether it accepts `.docx` input at all, is documented in `physics-agent/parser_requirements.md` — do not improvise an invocation form from memory.
+根据用户提供的文件形态，自适应选择最佳工具链：
 
-- "The corrupted regions are not in the critical places" is a judgment you make **on the specific document's Tier-0/Tier-1 output**, per document, not a global standing decision that "physics documents always need Tier 2" or "this one particular problem type does." Re-make it every time the trigger fires.
-- Tier 2 (MinerU, local `basic`) is the **only** locally-runnable tier on this machine's hardware; higher-quality tiers require a remote/upload path that needs the user's explicit consent (privacy boundary on whether their document may leave this machine) and are not part of the default flow — see `physics-agent/parser_requirements.md` for that consent rule.
-- **Unverified, do not assume it works**: MinerU's `--pages` flag is documented in `mineru-kit`'s own `--help` output but has **not** been re-verified end-to-end in this project's environment (the earlier `parser_benchmark_analysis.md` runs all used the default full-document `--pages` path) — the first time a "定点补全" is actually needed, confirm it actually returns only the requested pages' content (not a silently-reverted full run) before citing the speed savings as fact; if it turns out to silently re-run the whole document, fall back to treating MinerU as a whole-document tool only, and note that in `parser_requirements.md`.
-- **Format coverage per tier (measured, not assumed)**: Tier 0 (`document_read`) covers PDF/DOC/DOCX/ZIP/plain text; Tier 1 (PyMuPDF4LLM) covers PDF only; Tier 2 (MinerU) covers PDF (page-range selectable) and — **unverified** — `.docx` (if a Tier 2 trigger fires on a `.docx`, do not assume it works; check `mineru-kit parse`'s actual behavior on that file first, and note the result in `parser_requirements.md`). If the user's file is a `.docx`/`.zip` (or similar) and Tier 0 is unavailable (file came in as a disk path, not a session attachment), there is currently no local Tier 1/2 equivalent for that format in this project — surface that explicitly rather than guessing whether `pymupdf4llm`/`mineru-kit` will accept it.
+### 1. 题目配图或手写笔记图片 (PNG / JPEG / WebP)
+- **直接使用 DSH 多模态工具**：调用 `read_image(file_path="...")`；
+- 重点提取：几何关系、坐标系定义、受力分解图、电路拓扑、光路传播方向或原始数据曲线。
+
+### 2. Word 格式作业与讲义 (.docx)
+- **调用 Office 系列技能**：加载 `skill(name="office-docx")` 或使用 Python `python-docx` 库提取正文段落与表格结构。
+
+### 3. PDF 文档与学术论文
+- **Tier 1（轻量快速预读，秒级响应）— PyMuPDF4LLM**：
+  - 提取文档标题层级、正文文本与结构化 Markdown 表格；
+  - 局限：对于密集复杂的数学公式，可能提取为离散字符，需进一步校验；
+- **Tier 2（公式级高精度解析）— MinerU**：
+  - 针对带有大量行间/行内复杂积分方程、微分算子的物理文献，调用 MinerU 提取标准 LaTeX 公式。
+
+---
+
+## 二、 物理公式复核防幻觉规范
+
+- 从外部 PDF 或扫描件中提取的物理公式，在代入建模前**必须先与原始题目描述进行物理常识交叉复核**；
+- 若提取文本中上下标断裂或符号丢失，应结合物理量纲与第一性原理重新补齐，严禁将明显残缺的识别乱码直接作为真理公式推导。

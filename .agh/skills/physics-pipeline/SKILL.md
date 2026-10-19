@@ -1,69 +1,76 @@
 ---
 name: physics-pipeline
-description: '实际执行阶段的核心节点：任务规范（Node 1，含 internal_prior 私密预判）、数据源路由（Node 1.5）、知识路由+模板适配检查（Node 2a）、建模-数值求解-验证（Node 2b）。触发信号是要开始实际建模/求解/验证之前，不是绘图、不是写报告。'
+description: '物理核心流水线：问题第一性解构、费米数量级先行估算、物理常数选用、八大物理板块算法求解谱系、以及超越单一数值的五大科研研究深度。'
 ---
 
-### Execution Pipeline (Nodes 1 → 2b)
-1. **Node 1 (Task Specification)**: Extract target physical quantities and constraints from the prompt. Write to `physics-agent/runtime/<task-slug>/problem_state.json`. **As part of this step, also create the task's own numeric hypothesis table** — start from `physics-agent/runtime/task_params_template.json` (a blank, domain-neutral skeleton: target quantity, quantified pass/fail constraints, the named physical constants this problem will need with where each number came from, and candidate (not settled) data-source / verification-baseline hints) and save the task instance at `physics-agent/runtime/<task-slug>/task_params.json` (as well as `physics-agent/knowledge/<domain-slug>/<domain-slug>_params.json` when deriving a reusable domain parameter table). Omit any block in the template that does not apply to this problem (e.g. a pendulum, optics, or circuit problem has no atmospheric-source block and no CD/A table — do not force-fill it); the "omit if not applicable" rule beats filling every field with plausible-looking placeholder values. All values in this file are *candidates to be confirmed or rejected* by Nodes 1.5/2a, never settled inputs the modeling code may lean on — the code consumes the structured array + verified baseline those later nodes produce, not this file's literals.
-   - **问题第一性解构与一句话目标提炼（Problem Deconstruction）**：拿到物理问题后，切忌直接套用公式盲目求解。首先明确：研究**对象（Object）**、外界**作用/场（Interactions）**、以及终极目标是**解释机理、定量预测还是优化系统**。在 `problem_state.json` 的 specification 中显式提炼**一句话核心研究目标**（如“研究 X 在 Y 影响下如何随 Z 变化”），确保后续推演与数值求解始终聚焦主线不偏离。
-   - **多小问复合型与教学推导型题目支持（Multi-question & Pedagogical Support）**：
-     - 若输入题目包含多个连续递进的子问题（如“①白光单缝衍射分布、②仪器分辨本领推导、③航天员太空看长城定量分析、④显微镜极限分辨率”），切忌手忙脚乱，在 Node 1 中将其解构为清晰递进的子任务列表（`sub_tasks: [1, 2, 3, 4]`），并提炼一条贯穿各子问题的物理主线（如“衍射光强空间演化 $\to$ 圆孔艾里斑与瑞利极限 $\to$ 宏观空间观测应用 $\to$ 微观成像极限”）；
-     - 对于标准理论推导与课内物理问题，安全/工程约束自然为 `N/A`（安全约束仅针对工程/探险类题目），目标物理量直接设为待推导的解析表达式、理论极限值及定性/定量物理判据，严禁强行虚构不存在的工程安全限制。
-   - **抓主要矛盾与数量级/费米先行估算（Order-of-Magnitude Estimation）**：
-     - 识别决定系统基本行为的**主导物理机制（Dominant Effects）**，将其与仅影响精度的**次要微扰（Secondary Perturbations）**区分开来，初版建模优先抓取主导机制；
-     - 在编写数值程序之前，尽早进行**粗略数量级估算（Fermi Estimation）**（估计特征时间尺度、特征速度、特征能量、特征角度或力的大小），确立基本物理尺度感，作为后续检验数值结果与排查程序数量级 bug 的前置护栏。
+### Execution Pipeline (Node 1 → Node 2b)
 
-1a. **Internal prior reasoning (private, NOT part of the user-facing work product)**: immediately after Node 1's spec is written, before touching any external data or the matched template's steps, form — in your own reasoning, not in the report and not shown to the user — a short, explicit free-form sketch of what you *think* the answer should look like and *why* (dominant physics regime, expected order of magnitude, what would most plausibly limit or dominate the result), and write that sketch into `problem_state.json` under a new, clearly-labeled field `internal_prior` (see `problem_state_schema.md`). Two hard rules govern this field:
-   - **It is reference input only, never evidence.** `internal_prior` must not be cited, quoted, or otherwise surfaced in the Node 3 report, the HTML, or the user-facing reply. Its only permitted use is as a *check* later in the run: when Node 2b's actual verified result comes out, the agent should consciously compare it against the earlier `internal_prior` sketch — a large divergence between "what I expected on intuition" and "what the verified computation actually produced" is a genuine signal (either the intuition was wrong, which is fine, or the modeling pipeline introduced a systematic bias, which is not fine and must be investigated) and should be explicitly flagged in `problem_state.json`'s `audit_logs` as an `internal_prior_divergence` note. A divergence that is explained and checked is a healthy part of the process; a divergence that is silently ignored, or that never gets checked against the final number at all, is the failure this field exists to prevent.
-   - **It must not masquerade as a settled result.** The sketch lives in its own field for exactly so it can never be confused with, or later read back as, the `verification`/`report` numbers. If at any later point the agent finds it reaching for `internal_prior`'s content to fill a gap in the actual analysis (rather than re-deriving it through the pipeline's own gates and verification), stop: that is the same failure mode §4 forbids for hand-replayed gate checks — an unverified sketch standing in for a verified one.
-2. **Node 1.5 (Data-Source Routing)**: For whatever external data this problem needs (modeling inputs AND the independent verification baseline), search online / assess what public source is actually appropriate *for this specific problem's conditions*, and decide the access method (API / published numeric table / analytical approximation).
-   - **标准常数与教学物理数据处理准则（泛用性支持）**：对于基础理论推导、光学几何常数、标准电磁参数及课内物理问题，所需的常数（如真空光速 $c$、普朗克常数 $h$、可见光红绿蓝特征波长 $\lambda$、人眼瞳孔公称直径 $D \sim 2\text{--}5\,\text{mm}$、显微物镜典型数值孔径 $\text{NA}$）属于通用基础物理常数或经典物理公称定义。优先从标准科学常数库（如 `scipy.constants`）或物理教材标准常数中直接调用，数据源记录如实标注为“基础物理常数与理论公称参数表”，**严禁强行去外部互联网爬取无意义数据**；
-   - **数据源获取与路由权威指引（强制必读）**：在为物理问题检索、获取仿真与建模输入数据时，必须参考 `physics-agent/knowledge/物理竞赛与仿真数据源权威指引.md` 中的三档分类、物理领域名录与决策树执行：
-     - ① **优先 Level 0 / Level 2 离线科学资产**：`scipy.constants`（CODATA常数）、`astropy.constants`（天体常数）、`ambiance`（0–86km 标准大气）、`pymsis`（86–1000km 高空热层），以及 `physics-agent/knowledge/reference_data/` 内预置基准集，100% 离线免网、最稳定；
-     - ② **其次第一档官方公开 REST API（免认证/结构化）**：NASA JPL SBDB/Horizons（小行星与精密星历）、NASA NSSDC（行星卫星常数表）、NIST WebBook（热力学Shomate多项式）、PubChem（物性常数）、NOAA SWPC（地磁与空间天气）、NASA POWER（空间经纬度气象网格）、OpenAlex/arXiv（论文公式与前沿参数）；
-     - ③ **第二档需人工协作交付（强受限数据）**：中国知网/万方/AIAA/IEEE（付费与校园网认证）、电商实物规格（滑块反爬）、实验视频打点（Tracker运动分析）、国际体育规则手册（FIBA/ITTF超长PDF）、经典纸质大部头（外弹道专著等），立即触发 Option A 人机协作通知用户协助查阅；
-     - ④ **第三档谨慎接入（需API Key/实名认证/动态风控）**：Materials Project（需MP_API_KEY）、国内科学数据中心（ScienceDB/NADC/CMA/NODA，部分数据需实名申请或审批），若无现成鉴权凭据则平滑降级为人机协作或离线库保底；
-   - **网络异常诊断与自适应绕过快路径（与网络指引双向互指）**：若调用 `web_fetch` 时遇到 `resolves to a non-public IP address` 报错，说明本地代理开启了 TUN / Fake-IP 模式使目标域名被解析到 `198.18.x.x`，触发了宿主 SSRF 防护。此时**严禁直接放弃**，必须按 `physics-agent/knowledge/network_and_vpn_guidelines.md` 执行自适应三步法：
-     - ① **代码级直连绕过（首选）**：改用轻量 Python 脚本（`urllib.request` / `requests`）通过操作系统底层网络栈发起请求（OS 会直接将流量送入 TUN 虚拟网卡隧道连通外部互联网，完全绕过宿主 `web_fetch` 的 `ipaddr.js` 非公网 IP 拦截）；
-     - ② **提示用户切换代理模式**：若 Python 脚本同样受阻，向用户说明原因并建议将代理软件切换为“系统代理模式”；
-     - ③ **离线科学包兜底**：若外部网络彻底断开，坚决降级使用 Level 0 离线包与 Level 2 本地基准表，严禁捏造虚假数据。
-   - Record the structured `data_source_decision` in `problem_state.json` AND append an audit record via `physics-agent/hooks/audit_log.py` (`source="agent-node1.5-data-source"`, passing `extras={"script_path": "<path-to-params-or-fetch-script>"}` and a **user-readable Simplified Chinese `args.note`** summarizing the data source name, origin, and scope without internal jargon like `Level 0/1/2` or `Node 1.5`, per `physics-auditability` C3/E5 rules). The source name must NOT be hardcoded into the method templates or the numerical model code — the code only ever consumes a structured data array that this step produces.
-   - **Fault-tolerance branch**: if the agent recommends a source it cannot fetch itself, it MUST pause, summarize its progress to the user, and present two options — (A) a concrete manual-fetch guide the user follows and hands the data back, or (B) proceed with a clearly-flagged analytical approximation instead — and wait for the user's choice before continuing. The agent may not unilaterally pick option B. See `physics-agent/knowledge/data-source-routing.md` step 5a for the full protocol.
-3. **Node 2a (Knowledge Routing + Template Adaptation Check)**: Match the problem against method templates in `physics-agent/knowledge/`. Once a template matches at the domain level, you MUST NOT blindly execute its steps — **first run an explicit, written "mechanism-match" check, not just a numeric one**: state, in `problem_state.json` (a `template_adaptation_notes`-style entry, or under `hypothesis_layer`), which *physical mechanism* the matched template is actually built around, and then check, line by line, whether **this specific problem's stated conditions actually instantiate that same mechanism** — not merely the same general topic. Every assumption in the matched template that *cannot* be justified by this problem's own stated conditions must be explicitly flagged as "inherited from the example, not validated for this problem" and either re-derived or dropped — never silently reused, and never presented in the report as if it were this problem's own justified choice. If no existing template fits even after this check (mechanism genuinely different, not just different numbers), derive a new one following the same structure (applicable domain / required parameters / numbered steps / failure-rollback triggers) — do not force a mismatched template into service by adjusting its numbers, and do not free-form invent a workflow without that structure. Worked examples of what this "张冠李戴" failure mode looks like concretely (and what a justified-drop of an inapplicable assumption looks like) live in `physics-agent/knowledge/pipeline_example_walkthroughs.md` §Node 2a, not here — read that file once for the examples; the hard rule above (run the written mechanism-match check before executing any template step, flag every un-justifiable assumption, derive a new template with the same structure if none fits) is the part that must be executed every run.
-   - **无预置模板领域与经典理论推导快路径（泛用性支持）**：若当前题目属于基础光学（波动/衍射/干涉）、量子力学、统计力学或电动力学理论推导，且 `physics-agent/knowledge/` 目录下尚未建立特定案例模板，**完全无需强行套用已有宏观动力学或阻力模板**。直接查阅 `physics-agent/knowledge/physics_research_methodology.md` 中对应物理板块（如板块⑤波动学与声学/光学）的方法论，依据第一性物理定律（如麦克斯韦方程、惠更斯-菲涅耳积分、夫琅禾费衍射公式、阿贝正弦条件）直接建立控制方程并展开规范推导即可。
-4. **Node 2b (Modeling, Execution & Verification)**: Execute the Dimensional Gate, fetch/parse the external data chosen in Node 1.5, run numerical integration — write a **fresh model module for this specific problem** (any ODE/numerical system you need; `physics-agent/hooks/ode_model.py` is only a reference example from the first project problem and is NOT required to be imported or adapted, even for another descent-type problem with different assumptions — see that file's docstring, which explicitly says to write a new module rather than patch the old one) — code stays source-agnostic: it receives a structured T(z)/ρ(z)-style array (or whatever structured array this problem's governing equation needs), not a named data source — and compare against the empirical baseline chosen in Node 1.5. **Independence rule**: the verification baseline must be an independent source from the modeling input data (do not validate a model against data pulled from the same source the model was built on, if independence is achievable); record whether this was achieved in `problem_state.json`'s `data_source_decision.verification_baseline.independent_of` field.
-   - **`shell` 工具精确调用规范（Tool Invocation Invariant）**：调用 `shell` 工具执行任何 Python 脚本或命令行时，传参必须是顶层属性 `command: "..."`（纯字符串），**绝对禁止**包装为 `{"input": ...}` 嵌套结构；若需指定目录传入 `cwd`。正确格式示例：`shell(command="python path/to/model.py")`。
-   - **严禁手搓 HTML 报告防降级铁律（Anti-Downgrade Invariant）**：最终交付的 HTML 报告**必须且只能由 `python physics-agent/hooks/trace_visualizer.py` 编译生成**！绝对禁止 Agent 试图绕过编译器、私自调用 `write` 工具去拼凑手写静态 HTML。手写 HTML 必然缺失真实会话甘特图、缺失毫秒级热跳转数据池、缺失数据驱动的无遮挡矢量图表，属于严重的偷懒降级违规行为。若编译脚本受阻，必须立即排查修复环境或按权限缺口协议上报，坚决杜绝交付未经编译验证的伪造报告！
-   - **权限被拒即刻熔断铁律（Stop-on-Rejection Invariant）**：执行数值求解脚本、生成图表或写入状态文件时，一旦任何工具调用（特别是 `shell` 命令行执行、`write`/`edit` 文件写入）返回审批被拒（`APPROVAL_REJECTED` / `user_rejected`）或超时未审批（`timeout`）：
-     1. **立即终止后续一切分析与推演**，绝对禁止假装未被拒绝而在思考窗中自顾自往下推演；
-     2. **绝对禁止手搓代跑与掩饰性绕过（No Workaround Improvisation）**：严禁在思考窗中尝试用手算、口算替代本应由真实 Python 脚本计算并落盘的数值结果，严禁捏造未执行步骤的输出；
-     3. **立即向用户报告受阻原因并请求授权**：必须在当前会话直接陈述受阻的具体工具名、命令行内容与所需权限，并等待人类用户明确指示（授权或跳过）后方可继续！
+核心物理建模、数值求解与多维验证流水线。涵盖平时作业严谨推导与竞赛科研攻坚所需的硬核方法论。
 
-   - **理论推导与教学物理题的多样化独立验证范式（泛用性支持）**：
-     - 对于标准理论推导、经典物理定律阐释或有明确标准解析解的问题，验证基准**不仅限于外部实测数据库比对**，更应充分采用理论物理学公认的四重独立验证范式：
-       ① **极端物理极限与经典退化检验（Asymptotic Limits）**：例如波长 $\lambda \to 0$ 时自洽退化为几何光学直线投影极限，缝宽 $a \to \infty$ 退化为无衍射几何阴影，圆孔半径 $R \to \infty$ 角分辨率趋于 0；
-       ② **解析闭合解与连续波阵面数值积分交叉核验（Analytical vs Numerical Quadrature）**：将菲涅耳-基尔霍夫衍射面元的数值积分结果与单缝衍射闭合公式 $I_0(\sin\beta/\beta)^2$ 逐点比对，验证解析推导的数学绝对严格性；
-       ③ **多准则交叉对比（Cross-criteria Validation）**：如将瑞利判据（两斑重叠处光强降至 73.5%）与道威斯经验准则（Dawes' Limit: $\theta = 116/D_{\text{mm}}$）、斯帕罗判据（Sparrow's criterion）进行比较；
-       ④ **能量守恒与无量纲标度率验证（Energy Conservation）**：对所有衍射级次积分总光通量与入射能量守恒。
-     - 以上理论自洽性验证均属于完全合规、极其严谨的独立验证路径，`independent_of` 字段如实标注为 `true` 即可。
-   - **题干多子系统/几何尺寸 100% 映射检查（Test 3 2025A 教训）**：在 Node 1 与 Node 2a/2b 建模时，必须逐一核对题干给出的所有物理部件与定量尺寸（例如既有“叶振膜频带 98–1047 Hz”又有“70 cm × 8 cm 竹管”时，不能只算叶振膜薄板模态而漏算竹管驻波谐波）。题干中每一个带数值的物理部件都必须在模型推导或显式假设中交代其物理贡献，严禁无声丢弃。
-   - **工程速算公式 / 一阶灵敏度提炼要求（Test 3 2025B 教训）**：若题干要求“给出一套不借助计算机/计算器即可快速估算的方法或实用规则”，除给出精确数值扫描结果外，还必须在 Node 2b/Node 3 中提炼出**闭合经验拟合公式或一阶线性微扰灵敏度系数**（如“距离每增加 50 m 仰角修正 +0.2°、风速每 1 m/s 修正 0.01°”），使结论真正满足现场速算需求。
-   - **非常规给定参数的适用边界前置声明（Test 2 教训）**：若题干给定的某项参数与常规工程尺寸差距显著（如给定等效迎风面积仅 0.2 m²），必须在摘要与结论首句显式注明“本数值结论基于题干给定特定参数得出，不直接等同于常规工程参数下的表现”，防止读者误读。
-   - **最简基线模型优先与渐进复杂度（Parsimonious Baseline & Progressive Complexity）**：
-     - 建模的首要目标是尽快建立并跑通 **Version 0.1 最简可用模型（Baseline Model）**，使系统基本动力学跑通，观察定性行为并暴露真实瓶颈；
-     - **复杂度引入的物理依据评估准则**：逐层增加复杂度（如计入非线性阻力、高阶引力摄动、热辐射损失），每增加一个修正项必须自问：“该因素是否显著改变化学/动力学结论？是否有充分的机理依据？增加的复杂度是否值得？”坚决反对脱离物理问题本身盲目堆砌高维算法或复杂偏微分方程。
-   - **数值求解多轮渐进迭代与留痕铁律（Multi-Iteration Refinement & Logging Invariant）**：
-     真实科研与工程仿真绝非“一次性盲猜成功”。在 Node 2b 开展数值计算与仿真时，模型**必须体现清晰的渐进式探索演化（至少完成 2~3 轮真实的迭代留痕）**：
-     ① **第 1 轮（基线/简化模型探索）**：首先建立并运行 Version 0.1 最简基线模型（如理想真空抛物线、无摄动二体开普勒轨道或几何光学直线传播），调用 `audit_log.py` 记录首轮输出（`iteration_index=1`，说明基线表现与初始理论偏差）；
-     ② **第 2 轮（物理修正或算法调优）**：引入真实非线性物理机制（如跨音速气动阻力、天体摄动引力、多波长连续谱色散积分）或修正数值步长截断，二次执行求解，调用 `audit_log.py` 记录（`iteration_index=2`，说明修正项带来的物理变化与收敛改善）；
-     ③ **第 3 轮（目标打靶/参数扫描与最终收敛）**：针对题干约束完成打靶寻优或全域参数敏感性扫描，调用 `audit_log.py` 记录最终版计算（`iteration_index=3`，验证收敛通过）。
-     **严禁“只记录最终版而掩盖前面探索过程”**！每一次运行都必须调用 `audit_log.py` 分别记录对应的 `iteration_index` 与中文说明，使最终报告能完整展现智能体“发现偏差 ➔ 物理分析 ➔ 算法迭代 ➔ 最终收敛”的真实科研探索过程。
-   - **超越孤立数值——发掘物理研究深度的五大维度（Dimensions of Scientific Depth）**：
-     研究结论绝不能止步于“算出一个单一数字”，而应结合问题场景，主动发掘系统背后的深层物理规律：
-     ① **参数敏感性与趋势扫描（Parameter Sweep & Sensitivity）**：扫描关键输入参数的变化区间，揭示输出响应对主导参数的依赖规律；
-     ② **特征无量纲数与标度律（Dimensionless Numbers & Scaling Laws）**：提炼主导物理过程的特征无量纲群（如雷诺数、马赫数、普朗特数、无量纲阻尼比等）或幂律标度关系；
-     ③ **渐近极限与物理退化条件（Asymptotic Limits & Boundary Degradation）**：检验参数趋于 0 或无穷大时模型的退化解是否自洽符合经典物理常理；
-     ④ **临界转变与分岔阈值（Critical Conditions & Transition Thresholds）**：探究系统是否存在稳定性临界点、分岔跃迁或相变阈值；
-     ⑤ **模型适用范围与失效边界（Regimes of Validity & Breakdown Boundaries）**：清晰界定当前模型在什么物理极限（如跨音速区、超高温解离、强引力场）下会失效，并说明进一步修正的方向。
-   - **【自由度与能力边界说明】**：以上指导旨在提升物理研究眼界、可靠性与规范性，绝非限制 AI 探索的教条枷锁。AI 应当充分发挥自身深厚的物理与数学知识储备，结合特定题目场景自主灵活地进行假设、建模、参数推演与多角度交叉论证。
+---
 
+## 1. Node 1：第一性解构与前置数量级估算 (Task Specification & Estimation)
+
+拿到任何物理问题后，严禁直接套用公式盲目代入数字，严格按以下三步解构：
+
+1. **第一性原理问题拆解（Problem Deconstruction）**：
+   - **研究对象（Object）**：质点、刚体、连续介质、带电粒子系统、波场或热力学系统；
+   - **相互作用与外场（Interactions）**：重力、电磁洛伦兹力、粘性/压差阻力、热传导、约束反力；
+   - **研究目标（Objective）**：机理阐释（为什么产生此现象）、定量预测（计算极值/轨迹/终态）、或系统优化（参数寻优）；
+   - **一句话研究目标提炼**：显式凝练出一句话核心课题（例如：“探究在非均匀大气密度下，返回舱减速阻力峰值如何随再入角与弹道系数变化”）。
+2. **多小问解构与主线贯穿（Multi-Question Decomposition）**：
+   - 面对大学物理作业或竞赛中的多小问复合题目，先梳理内在的物理逻辑链条（如“波函数演化 $\to$ 几率流密度 $\to$ 势垒穿透系数 $\to$ 宏观电导率”），解构为递进的子任务列表，逐个击破。
+3. **费米数量级估算先行（Fermi / Order-of-Magnitude Estimation）**：
+   - 在动用重型微分方程求解之前，必须先进行特征物理量的粗略数量级估算（估算特征时间尺度 $\tau$、特征速度 $v$、特征能量 $E$ 或无量纲比值）；
+   - 数量级估算作为全局物理直觉的基准护栏，防止程序产生荒谬的数量级 bug（如将米错当千米、或量纲指数错位）。
+
+---
+
+## 2. Node 1.5：物理常数标准库与权威数据源路由 (Data Source Routing)
+
+1. **基础物理常数优先标准库**：
+   - 绝不通过网络检索容易被二传篡改的常数，优先直接使用 Python `scipy.constants` 标准库或 CODATA 2022 推荐值（光速 $c$、引力常量 $G$、普朗克常数 $h$、玻尔兹曼常数 $k_B$、电子电荷 $e$ 等）；
+   - 教材与课内习题以题目给定公称常数为准。
+2. **宏观物性与连续环境数据源分类选用**：
+   - **Level 1（免鉴权结构化权威库）**：US Standard Atmosphere 1976（大气模型）、NASA Exoplanet Archive、NIST 原子光谱数据库等；
+   - **Level 2（公开经典学术文献与工程手册）**：标准翼型阻力极曲线、材料热力学相变潜热表；
+   - **Level 3（受限/非结构化数据）**：明确标注数据源出处与假设依据。
+3. **网络自愈原则**：
+   - 遇到代理软件 TUN 拦截时，优先使用本地自带数据或通过 Python socket 底层直连穿透。
+
+---
+
+## 3. Node 2a：物理机理展开与八大板块算法工具谱系 (Physics Spectrum)
+
+### 最简基线模型（Version 0.1）优先
+- 无论题目多复杂，必须先建立并跑通最简基线模型（如质点近似、无阻力、常物性）；
+- **渐进复杂度引入准则（Complexity Justification）**：后续每引入一个真实物理修正因素（如空气阻力、潮汐引力、热耗散），必须在物理分析中论证其必要性与主导性，拒绝“为了显得高深而堆砌盲目算法”。
+
+### 八大经典物理板块与 Python 算法谱系对照表
+
+| 物理分支领域 | 核心物理机制与控制方程 | 推荐 Python 求解器与工具库 | 典型验证与检验方法 |
+| :--- | :--- | :--- | :--- |
+| **1. 质点与刚体动力学** | 牛顿-欧拉方程、拉格朗日方程、哈密顿相流 | `sympy.physics.mechanics` 符号推导<br>`scipy.integrate.solve_ivp` (RK45/DOP853) | 机械能守恒、角动量守恒、相平面闭合轨道检验 |
+| **2. 流体阻力与空气动力学** | 变雷诺数阻力模型 $C_D(Re, Ma)$、连续介质流 | 分段光滑阻力函数插值、事件检测 `events` 终止条件 | 终端收尾速度平衡检验、超音速跨音速激波对比 |
+| **3. 天体引力与天体力学** | 限制性三体问题、开普勒二体轨道、引力弹弓助推 | 轨道根数转换、数值积分、变步长打靶法 `scipy.optimize.root` | 蒂塞朗参量不变性、能量积分闭合解比对 |
+| **4. 热学与输运过程** | 傅里叶导热偏微分方程、对流换热、相变Stefan问题 | 空间半离散化 (Method of Lines) + 隐式刚性求解器 (Radau/BDF) | 总热量守恒、稳态渐近解对比、集总参数法对比 |
+| **5. 波动与波动光学** | 麦克斯韦方程、夫琅禾费/菲涅耳衍射、色散折射 | `scipy.integrate.quad` 数值积分、FFT 频谱分析 | 艾里斑第一暗环瑞利角 $1.22\lambda/D$、薄膜干涉极值点 |
+| **6. 电动力学与粒子运动** | 洛伦兹力、毕奥-萨伐尔定律、电磁感应漂移 | 借助于 Boris 算法或高阶辛几何积分器，磁场数值格点插值 | 绝热不变量（磁矩 $\mu$ 守恒）、回旋半径与周期验证 |
+| **7. 生物物理与尺度律** | 异速生长定律 (Allometric scaling)、无量纲场 | 幂律非线性最小二乘拟合 `scipy.optimize.curve_fit` | 无量纲数配平、两极极限对数线性度检验 |
+| **8. 优化与反问题求解** | 约束极值、变分极值、灵敏度矩阵 | `scipy.optimize.minimize` (SLSQP/Trust-Region) | 库恩-塔克 (KKT) 一阶必要条件、二阶海森矩阵定符号 |
+
+---
+
+## 4. Node 2b：独立数值求解与超越孤立数字的五大深度 (Scientific Depth)
+
+### 外部独立代码真实求解（No Hand Calculation）
+- **免口算铁律**：大模型仅负责物理机制理解与程序架构，所有的数值积分、代数运算必须在外部独立 Python 脚本中运行并捕获控制台输出，坚决杜绝大模型直接口算物理量；
+- **调试演化留痕**：保留算法尝试与参数调试迭代过程，如实记录发现偏差、机理修正、再次收敛的完整科研探索轨迹。
+
+### 发掘物理研究深度的五大维度（Dimensions of Scientific Depth）
+研究结论绝对不能停留在“算出一个单一数字”，必须主动发掘物理系统背后的规律：
+1. **参数敏感性与趋势扫描（Parameter Sweep & Sensitivity）**：扫描主导参数在物理可行域内的响应，绘制响应曲线族；
+2. **特征无量纲数与标度律（Dimensionless Groups & Scaling Laws）**：提炼决定系统行为的关键无量纲数（如雷诺数 $Re$、马赫数 $Ma$、阻尼比 $\zeta$ 等）并分析幂律依赖；
+3. **渐近极限与物理退化条件（Asymptotic Limits & Boundary Degradation）**：检验当关键参数趋于 0 或无穷大时，解是否光滑退化为经典已知物理结论；
+4. **临界条件与分岔阈值（Critical Conditions & Transition Thresholds）**：探究系统是否存在稳定性临界点、分岔翻转或相变失稳；
+5. **模型适用范围与失效边界（Regimes of Validity & Breakdown Boundaries）**：明确说明当前理论模型在何种物理边界下会失效（如极端高温电离、强非线性激波、微观量子效应），并指明进一步修正路线。

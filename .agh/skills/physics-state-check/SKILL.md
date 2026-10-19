@@ -1,12 +1,21 @@
 ---
 name: physics-state-check
-description: '每个物理分析/建模/数值求解任务的第一道检查，确认/创建本任务专属的 problem_state.json（含 session_key 记录规则）、判断该任务该从哪个已有阶段恢复还是全新开始。'
+description: '物理任务专属状态机初始化：创建/校验本任务专属的 problem_state.json，管理会话状态并隔离历史题目数据。'
 ---
 
-### State Check (Cross-Session Bootstrapping)
-Upon receiving a physics task, your FIRST step MUST be to check for the existence of the single source of truth: a concrete `problem_state.json` for *this specific task*.
-- A brand-new task MUST start from a clean copy of `physics-agent/runtime/problem_state_template.json` (a generic blank skeleton) and be saved as `physics-agent/runtime/<task-slug>/problem_state.json` (one per-task subfolder, `<task-slug>` = the task's topic phrase per the C1 naming rule, see `physics-agent/knowledge/path_convention.md` §4; not a flat `problem_state_<task-slug>.json` sitting directly in the `runtime/` root — that flat naming was the old convention, superseded by the ③第 5 条 / C1 sub-folder rule, 10/12); never resume an unrelated task's state file as if it were yours.
-  - *(路径写法指针，③第 3/5 条，10/12：本节上面这句旧写法已由 ③第 5 条一并更正为每题一个子文件夹的新写法；本节指针本身只在“需要写到/读哪个文件”时指向 `physics-agent/knowledge/path_convention.md`，不复制目录树正文，避免主 skill 里继续堆跟单一节点职责无关的目录地图。)*
-- **Record this run's own session key into the state file, on first creation**: the AGH host hands every session a stable, unique `sessionKey` string (visible to you in the runtime context / session metadata that accompanies your own conversation, not something you invent or guess). Write that exact value into `problem_state.json`'s `session_key` field (new field, see `problem_state_schema.md`) when you create the task's state file in this step. This is not optional housekeeping — it is what makes Node 4's automatic trace acquisition (pulling this run's own AGH event log back for the report, without the user manually exporting anything) actually possible: the session key is the handle Node 4 needs to look up *this* session's trace. If, for any reason, you cannot determine the current session key at Node 0/1 time (e.g. the runtime context does not expose it to you in your particular client surface), do NOT guess or fabricate one; leave `session_key` null, note that fact in `audit_logs` via `audit_log.py`, and treat Node 4's automatic trace pull as degraded to "user-supplied session key" for this run only — do not silently fall back to another session's key or a placeholder value.
-- If a state file for the current task already exists (created earlier in this task's own run), load it and resume from the recorded stage (e.g., `node_2b_modeling`). Never re-derive historical steps.
-- Do NOT load a state file that belongs to a different, previously worked problem as the starting point for a new problem; use it only as reference material if explicitly presented as such, and do not carry over its numeric values or caveats into your own run.
+### State Check (Task Isolation & Session Bootstrapping)
+
+在启动任何复杂的物理分析、数值求解或竞赛建模任务时，首要步骤是确认并初始化该任务的单一状态真源：`problem_state.json`。
+
+1. **全新任务初始化与目录隔离**：
+   - 从 `physics-agent/runtime/problem_state_template.json` 复制一份空白骨架；
+   - 必须保存在专属子目录下：`physics-agent/runtime/<task-slug>/problem_state.json`（`<task-slug>` 为任务主题英文简述，如 `kepler-orbit`、`wave-optics`、`space-diving`）；
+   - 本任务产生的所有文件（代码、日志、图表、中间报告）统一存放在 `<task-slug>/` 文件夹内，绝对禁止平铺于根目录；
+   - 严禁直接套用其他无关历史题目的状态文件，确保任务之间物理假设与参数彻底隔离。
+
+2. **会话标识（Session Key）记录**：
+   - 若会话环境中提供了唯一 session key，写入 `problem_state.json` 的 `session_key` 字段；
+   - 若无法获取，填 `null` 并通过 `audit_log.py` 记录说明，不臆造或虚构伪 session key。
+
+3. **历史阶段断点续跑（Resume from Stage）**：
+   - 若本任务已存在执行中的 `problem_state.json`，读取当前 `stage`（如 `node_2b_modeling`），直接从该阶段断点续跑，不重复推导前序已验证节点。
