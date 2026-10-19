@@ -99,6 +99,15 @@
 - **[04_modern_matlab_style_guide.md](04_modern_matlab_style_guide.md)**：现代 MATLAB R2023b 规范与避坑指南（点乘点除防坑、匿名函数句柄传参、报错急救）。
 - **[05_paper_figure_recipes.md](05_paper_figure_recipes.md)**：专为 UPC 竞赛定制的学术级出图秘籍（双 Y 轴排版、LaTeX 字体解析、`exportgraphics` 300 DPI 无损导出）。
 
+### 仿真升级触发矩阵 (When to Escalate to Level 2)
+
+| 触发信号 (Triggers) | 物理/数值问题本质 | 升级查阅目标 |
+| :--- | :--- | :--- |
+| **求解器步长崩溃、耗时极长或报错 `Failure at t=...`** | 遇到强刚性系统或容差设置不当 | [`01_solver_matrix.md`](01_solver_matrix.md) |
+| **报错 `Matrix dimensions must agree` 或优化器参数串味** | 未使用点乘运算 (`.*`) 或使用了 `global` 变量 | [`04_modern_matlab_style_guide.md`](04_modern_matlab_style_guide.md) |
+| **需要高精度大气、跨音速阻力危机、马格努斯力或微孔泄漏** | 需复用经过验证的物理机理子函数 | [`03_physics_submodels.md`](03_physics_submodels.md) |
+| **输出图表文字重叠、图例遮挡曲线或分辨率不足 300 DPI** | 违反出版级科研绘图规范 | [`05_paper_figure_recipes.md`](05_paper_figure_recipes.md) |
+
 ---
 
 ## 五、 数据源与实测参数获取（网络检索资源的转化）

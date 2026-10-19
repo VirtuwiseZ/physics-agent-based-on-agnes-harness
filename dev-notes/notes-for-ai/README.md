@@ -35,7 +35,8 @@
 
 | 文档名称 | 核心关注领域 | 适用场景与关键提要 |
 | :--- | :--- | :--- |
-| **`commit规范与暂存操作指南.md`** | 版本控制与环境防坑 | • Git 规范化提交三类价值判断（A/B/C 分流）；<br>• Windows PowerShell 5.1 纯 ASCII 语法防乱码与防崩溃三道铁律；<br>• 多行 Commit 必须采用 `git commit -F <file>` 外置文本；<br>• **【绝对红线】严禁执行 `git push`（仅本地提交，由开发者本人处理）**。 |
+| **`_QUICKSTART.md`** | **[Level 1] 开发与提交极速指南** | • 80% 常规 Git 提交 4 步流、PowerShell 5.1 编码防坑、DSH 沙盒提权机制与触发升级矩阵。 |
+| **`commit规范与暂存操作指南.md`** | [Level 2] 版本控制与环境防坑 | • Git 规范化提交三类价值判断（A/B/C 分流）；<br>• Windows PowerShell 5.1 纯 ASCII 语法防乱码与防崩溃三道铁律；<br>• 多行 Commit 必须采用 `git commit -F <file>` 外置文本；<br>• **【绝对红线】严禁执行 `git push`（仅本地提交，由开发者本人处理）**。 |
 | **`分支管理与开发协作规范.md`** | 分支流转与协作规则 | • 确立分支分工定位（`UPC` 竞赛开发分支、`physics-agent` 主开发分支、`main` 生产主支）；<br>• **当前开发必须锁定在 `UPC` 分支，严禁直接修改或向 `main`、`physics-agent` 提交代码**。 |
 | **`通用语言风格与AI提示词指南.md`** | 语言风格与 Prompt 资产 | • 通用六大语言底色（平实求真、杜绝黑话、零自吹自擂、彻底脱敏、有理有据）；<br>• 负向拦截词汇库（Negative Constraints 黑名单）。 |
 | **`network_and_vpn_guidelines.md`** | 网络环境与代理适配 | • 记录代理开启虚拟网卡（TUN 模式）但关闭“覆写DNS”时 `web_fetch` 正常工作的实测定论；<br>• Python 底层网络套接字（Socket）直连穿透兜底方案。 |

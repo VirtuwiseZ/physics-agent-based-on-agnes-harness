@@ -1,3 +1,37 @@
+# AGENTS.md - Workspace Instructions & AI Progressive Disclosure Router
+
+> **Current Branch (`UPC`) Mission**: This workspace on branch `UPC` is strictly focused on **University Physics Competition (UPC, 48h) modeling, MATLAB R2023b simulation co-pilot, and physics academic advising**.
+> Upstream Agnes Harness engine development rules (Node.js/C++ daemon) are secondary and preserved at the bottom under `## Upstream Agnes Harness Core Engine (Reference Only)`.
+
+---
+
+## Level 0: AI Progressive Disclosure Master Router (Read This First)
+
+To avoid context/token waste and guideline corruption, follow the **Progressive Disclosure** model:
+1. Start with this Level 0 router (automatically inlined by DeepSeek Harness).
+2. Read ONLY the Level 1 Quickstart corresponding to your immediate task.
+3. Escalate to Level 2 Deep Specifications ONLY when an explicit "Escalation Signal" is triggered.
+
+### 1. Absolute Engineering Red Lines (Must Follow Across All Tasks)
+- **Branch Confinement**: All physics modeling, simulation, and dev-notes work MUST stay on branch `UPC`. NEVER checkout, modify, or push to `main` or `physics-agent`.
+- **Git Push Prohibition**: NEVER execute `git push`. Only perform clean, localized `git commit` on branch `UPC`. Remote pushing is strictly reserved for human developers.
+- **PowerShell 5.1 ASCII Encoding**: On Windows pwsh, multi-line Chinese commit messages passed inline with `-m "..."` will cause UTF-8 byte mangling and git log corruption. ALWAYS write commit messages to an external file (`commit_msg.txt`), commit with `git commit -F commit_msg.txt`, then delete the temporary file.
+- **Human-AI Division of Labor**: Humans lead paper writing in Microsoft Word (`.docx`) and interactive MATLAB figure inspection. AI serves as scientific co-pilot: equation derivation, ODE/PDE coding, `.mat` data analysis, error recovery, and vision review. NEVER unilaterally generate full LaTeX papers unless explicitly requested.
+
+### 2. Task Routing Matrix (Level 0 -> Level 1 Quickstarts)
+
+| If Your Immediate Task Is... | Level 1 Quickstart / Router to Read | Happy Path Scope (80% Normal Cases) | Escalation Signal (When to Read Level 2) | Level 2 Deep Specification |
+| :--- | :--- | :--- | :--- | :--- |
+| **Git Commit / Branch / Environment** | [`dev-notes/notes-for-ai/_QUICKSTART.md`](dev-notes/notes-for-ai/_QUICKSTART.md) | Standard 3-step commit, ASCII safety, status checks | Multi-line Chinese commit formatting, sandbox permission denial, branch conflicts | [`commit规范与暂存操作指南.md`](dev-notes/notes-for-ai/commit规范与暂存操作指南.md)<br>[`分支管理与开发协作规范.md`](dev-notes/notes-for-ai/分支管理与开发协作规范.md) |
+| **UPC Physics Modeling & MATLAB Simulation** | [`physics-agent/knowledge/matlab_upc_guide/README.md`](physics-agent/knowledge/matlab_upc_guide/README.md) | Problem-to-solver routing, 48h rhythm, 5 model quality defense lines | Solver stiffness/tolerance tuning, ODE/PDE code debugging, modern R2023b syntax pitfalls | [`01_solver_matrix.md`](physics-agent/knowledge/matlab_upc_guide/01_solver_matrix.md)<br>[`04_modern_matlab_style_guide.md`](physics-agent/knowledge/matlab_upc_guide/04_modern_matlab_style_guide.md)<br>[`02_battle_tested_templates/`](physics-agent/knowledge/matlab_upc_guide/02_battle_tested_templates/) |
+| **External Parameters & Physical Constants** | [`physics-agent/knowledge/物理竞赛与仿真数据源权威指引.md`](physics-agent/knowledge/物理竞赛与仿真数据源权威指引.md) | Level 1 free public APIs (NASA, NIST) & Level 0 offline libraries | Network VPN/TUN blocking, restricted academic databases (CNKI, IEEE) | [`network_and_vpn_guidelines.md`](dev-notes/notes-for-ai/network_and_vpn_guidelines.md)<br>[`需人工查找与整理的数据源.md`](dev-notes/notes-for-ai/需人工查找与整理的数据源.md) |
+| **Academic Figure Generation & Vision Loop** | [`physics-agent/knowledge/matlab_upc_guide/05_paper_figure_recipes.md`](physics-agent/knowledge/matlab_upc_guide/05_paper_figure_recipes.md) | 300 DPI `exportgraphics`, LaTeX font, tiledlayout recipes | Image visual inspection (`read_image`) shows overlapped text or clipped legends | [`report_structure_guide.md`](physics-agent/knowledge/report_structure_guide.md) |
+| **Human Strategic Review & Learning Guide** | [`dev-notes/UPC备赛与AI科学协同工作流复盘总结.md`](dev-notes/UPC备赛与AI科学协同工作流复盘总结.md) | Human-facing summary of past rounds, high-value AI workflow details, study advice | N/A (Read when human asks for retrospective or workflow guidance) | Same document |
+
+---
+
+## Upstream Agnes Harness Core Engine (Reference Only)
+
 # Working on Agnes Harness
 
 Read [README.md](README.md), the [documentation](docs/README.md), and the relevant module before making changes. Development pull requests are currently limited to invited internal collaborators; see [CONTRIBUTING.md](CONTRIBUTING.md).
