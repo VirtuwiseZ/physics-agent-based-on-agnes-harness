@@ -18,7 +18,7 @@ params.W_dir = deg2rad(45);   % 风向方位角 (rad, 0度表示顺风+X, 90度�
 params.W_vec = [params.W_mag * cos(params.W_dir); 0; params.W_mag * sin(params.W_dir)];
 
 % 任务目标
-target_dist = 1200.0;         % 目标水平直线距离 (m)
+target_dist = 2200.0;         % 目标水平直线距离 (m)
 v_muzzle    = 380.0;          % 炮口初速 (m/s)
 
 fprintf('====================================================\n');
@@ -33,16 +33,16 @@ fprintf('[Step 1] 正在通过打靶法 (fzero) 搜索击中目标的发射仰�
 % 定义残差目标函数：输入发射仰角 (deg)，输出弹道落地时与目标距离的差值 (m)
 objective_fun = @(theta_deg) forward_trajectory_residual(theta_deg, v_muzzle, target_dist, params);
 
-% 设定物理合理的仰角搜索区间 [5度, 80度]
-search_bracket = [10.0, 75.0];
+% 设定物理合理的仰角搜索区间 [10度, 45度] 对应平射弹道 (低空快速突防)
+search_bracket = [10.0, 45.0];
 opt_shooting = optimset('TolX', 1e-6, 'Display', 'off');
 
 try
     theta_sol_deg = fzero(objective_fun, search_bracket, opt_shooting);
     fprintf('  [成功] 命中目标的发射仰角为: %.4f 度 (%.4f rad)\n', theta_sol_deg, deg2rad(theta_sol_deg));
 catch ME
-    warning('打靶法在当前区间内未找到单根，可能超出最大射程。尝试在全仰角范围扫描寻找极值。');
-    theta_sol_deg = 45.0; % 退化回 45 度
+    warning('打靶法在当前区间内未找到单根，尝试初猜迭代...');
+    theta_sol_deg = fzero(objective_fun, 25.0, opt_shooting);
 end
 
 %% 3. 高精度前向弹道全历程仿真与数据提取
@@ -80,20 +80,20 @@ fprintf('  落地撞击速度: %.2f m/s (着地马赫数: %.2f)\n', impact_speed
 %% 4. 学术级学术图表生成与排版 (现代 tiledlayout)
 fprintf('[Step 3] 正在绘制学术级科研图表...\n');
 
-fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500]);
+fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500], 'Visible', 'off');
 tiled = tiledlayout(1, 2, 'Padding', 'compact', 'TileSpacing', 'compact');
 
 % 子图 1: 3D 空间飞行轨迹与地表投影
 nexttile(1);
-plot3(Y_traj(:,1), Y_traj(:,3), Y_traj(:,2), 'b-', 'LineWidth', 2.0, 'DisplayName', '实际飞行轨迹');
+plot3(Y_traj(:,1), Y_traj(:,3), Y_traj(:,2), 'b-', 'LineWidth', 2.0, 'DisplayName', 'Trajectory');
 hold on;
-plot3(Y_traj(:,1), Y_traj(:,3), params.H_alt * ones(size(Y_traj(:,1))), 'k--', 'LineWidth', 1.0, 'DisplayName', '地面投影');
-plot3(target_dist, 0, params.H_alt, 'r*', 'MarkerSize', 12, 'LineWidth', 2, 'DisplayName', '目标靶心');
+plot3(Y_traj(:,1), Y_traj(:,3), params.H_alt * ones(size(Y_traj(:,1))), 'k--', 'LineWidth', 1.0, 'DisplayName', 'Ground Track');
+plot3(target_dist, 0, params.H_alt, 'r*', 'MarkerSize', 12, 'LineWidth', 2, 'DisplayName', 'Target');
 grid on; box on; view(35, 25);
-xlabel('射程 X (m)', 'Interpreter', 'latex', 'FontSize', 11);
-ylabel('侧偏向 Z (m)', 'Interpreter', 'latex', 'FontSize', 11);
-zlabel('海拔高度 Y (m)', 'Interpreter', 'latex', 'FontSize', 11);
-title('三维空间弹道与侧风偏航轨迹', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Downrange $X$ (m)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Crossrange $Z$ (m)', 'Interpreter', 'latex', 'FontSize', 11);
+zlabel('Altitude $Y$ (m)', 'Interpreter', 'latex', 'FontSize', 11);
+title('3D Trajectory with Crosswind Drift', 'Interpreter', 'latex', 'FontSize', 12);
 legend('Location', 'northeast', 'Interpreter', 'latex');
 
 % 子图 2: 速度演化与高度剖面 (双 Y 轴对比)
@@ -101,15 +101,15 @@ nexttile(2);
 yyaxis left;
 speed_profile = sqrt(sum(Y_traj(:,4:6).^2, 2));
 plot(t_traj, speed_profile, 'r-', 'LineWidth', 2.0);
-ylabel('飞行总速度 (m/s)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Total Velocity $v$ (m/s)', 'Interpreter', 'latex', 'FontSize', 11);
 grid on;
 
 yyaxis right;
 plot(t_traj, Y_traj(:,2) - params.H_alt, 'b--', 'LineWidth', 2.0);
-ylabel('相对地面高度 (m)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Relative Altitude $h$ (m)', 'Interpreter', 'latex', 'FontSize', 11);
 
-xlabel('飞行时间 t (s)', 'Interpreter', 'latex', 'FontSize', 11);
-title('速度衰减与高度时序演化 (双轴对比)', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Flight Time $t$ (s)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Velocity and Altitude Time Histories', 'Interpreter', 'latex', 'FontSize', 12);
 
 % 导出符合出版物要求的无损高清图
 exportgraphics(fig, 'trajectory_result.png', 'Resolution', 300);

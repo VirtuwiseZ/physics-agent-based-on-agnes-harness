@@ -97,37 +97,37 @@ ellipse_z = mean(Z_impact) + a_semi * cos(theta_ellipse) * sin(phi_rot) + b_semi
 %% 6. 学术出版级出图 (散点分布 + 置信椭圆 + 边际直方图)
 fprintf('\n[Step 2] 正在绘制学术级散布相图...\n');
 
-fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500]);
+fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500], 'Visible', 'off');
 tiled = tiledlayout(1, 2, 'Padding', 'compact', 'TileSpacing', 'compact');
 
 % 子图 1: 二维地表落点散布与 95% 置信椭圆
 nexttile(1);
-scatter(X_impact, Z_impact, 10, [0.3 0.5 0.9], 'filled', 'MarkerFaceAlpha', 0.4, 'DisplayName', '落点样本');
+scatter(X_impact, Z_impact, 10, [0.3 0.5 0.9], 'filled', 'MarkerFaceAlpha', 0.4, 'DisplayName', 'Impact Points');
 hold on;
-plot(ellipse_x, ellipse_z, 'r-', 'LineWidth', 2.2, 'DisplayName', '95% 散布置信椭圆');
+plot(ellipse_x, ellipse_z, 'r-', 'LineWidth', 2.2, 'DisplayName', '95\% Confidence Ellipse');
 
 % 绘制目标区域
 th_target = linspace(0, 2*pi, 60);
-plot(target_x + target_rad*cos(th_target), target_z + target_rad*sin(th_target), 'k-', 'LineWidth', 2.0, 'DisplayName', '目标有效区域');
-plot(target_x, target_z, 'kp', 'MarkerFaceColor', 'y', 'MarkerSize', 12, 'DisplayName', '目标靶心');
+plot(target_x + target_rad*cos(th_target), target_z + target_rad*sin(th_target), 'k-', 'LineWidth', 2.0, 'DisplayName', 'Target Radius');
+plot(target_x, target_z, 'kp', 'MarkerFaceColor', 'y', 'MarkerSize', 12, 'DisplayName', 'Target Center');
 
 grid on; box on; axis equal;
-xlabel('射程 X 方向落点 (m)', 'Interpreter', 'latex', 'FontSize', 11);
-ylabel('侧向 Z 方向落点 (m)', 'Interpreter', 'latex', 'FontSize', 11);
-title('落点蒙特卡洛散布与 95% 置信椭圆', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Downrange $X$ (m)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Crossrange $Z$ (m)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Monte Carlo Dispersion with 95\% Ellipse', 'Interpreter', 'latex', 'FontSize', 12);
 legend('Location', 'northeast', 'Interpreter', 'latex');
 
 % 子图 2: 目标偏离距离直方图与概率密度
 nexttile(2);
 histogram(distance_to_target, 35, 'Normalization', 'pdf', 'FaceColor', [0.2 0.7 0.5], 'EdgeColor', 'w');
 hold on;
-xline(cep_50, 'r--', sprintf('CEP (50%%) = %.1fm', cep_50), 'LineWidth', 2.0, 'Interpreter', 'latex');
-xline(target_rad, 'k-', sprintf('目标半径 = %.1fm', target_rad), 'LineWidth', 2.0, 'Interpreter', 'latex');
+xline(cep_50, 'r--', sprintf('CEP (50\\%%) = %.1f m', cep_50), 'LineWidth', 2.0, 'Interpreter', 'latex');
+xline(target_rad, 'k-', sprintf('Target $R$ = %.1f m', target_rad), 'LineWidth', 2.0, 'Interpreter', 'latex');
 
 grid on; box on;
-xlabel('相对目标偏离距离 (m)', 'Interpreter', 'latex', 'FontSize', 11);
-ylabel('概率密度 (PDF)', 'Interpreter', 'latex', 'FontSize', 11);
-title('目标偏离距离分布与 CEP 统计', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Miss Distance from Target (m)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Probability Density Function (PDF)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Radial Miss Distance Distribution \& CEP', 'Interpreter', 'latex', 'FontSize', 12);
 
 exportgraphics(fig, 'monte_carlo_result.png', 'Resolution', 300);
 fprintf('  [完成] 散布图已无损导出至 monte_carlo_result.png (300 DPI)\n\n');

@@ -67,23 +67,23 @@ fprintf('  初始比角动量: %.4e m^2/s | 终止比角动量: %.4e m^2/s\n', h
 %% 4. 学术级轨道演化与能量图绘制
 fprintf('[Step 3] 正在生成学术论文标准出图...\n');
 
-fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500]);
+fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500], 'Visible', 'off');
 tiled = tiledlayout(1, 2, 'Padding', 'compact', 'TileSpacing', 'compact');
 
 % 子图 1: 太阳系中心天体轨道平面演化图 (以 AU 为单位)
 nexttile(1);
-plot(Y_vec(:,1)/const.AU, Y_vec(:,2)/const.AU, 'b-', 'LineWidth', 1.8, 'DisplayName', '离子推进螺旋渐开轨道');
+plot(Y_vec(:,1)/const.AU, Y_vec(:,2)/const.AU, 'b-', 'LineWidth', 1.8, 'DisplayName', 'Thrust Trajectory');
 hold on;
-plot(0, 0, 'yo', 'MarkerFaceColor', [1 0.7 0], 'MarkerSize', 12, 'DisplayName', '中心天体 (太阳)');
+plot(0, 0, 'yo', 'MarkerFaceColor', [1 0.7 0], 'MarkerSize', 12, 'DisplayName', 'Sun');
 
 % 绘制 1.0 AU 初始参考圆轨道
 theta_circle = linspace(0, 2*pi, 200);
-plot(cos(theta_circle), sin(theta_circle), 'k--', 'LineWidth', 1.0, 'DisplayName', '初始地球轨道 (1 AU)');
+plot(cos(theta_circle), sin(theta_circle), 'k--', 'LineWidth', 1.0, 'DisplayName', 'Initial Orbit (1.0 AU)');
 
 grid on; box on; axis equal;
-xlabel('X 坐标 (AU)', 'Interpreter', 'latex', 'FontSize', 11);
-ylabel('Y 坐标 (AU)', 'Interpreter', 'latex', 'FontSize', 11);
-title('连续微推力深空轨道转移历程 (AU)', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Position $X$ (AU)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Position $Y$ (AU)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Continuous Low-Thrust Orbital Spiral', 'Interpreter', 'latex', 'FontSize', 12);
 legend('Location', 'northwest', 'Interpreter', 'latex');
 
 % 子图 2: 轨道半径与比机械能演化 (双 Y 轴对比)
@@ -91,15 +91,15 @@ nexttile(2);
 t_days = t_vec / 86400.0;
 yyaxis left;
 plot(t_days, r_vec / const.AU, 'b-', 'LineWidth', 2.0);
-ylabel('轨道天体距离 r (AU)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Orbital Radius $r$ (AU)', 'Interpreter', 'latex', 'FontSize', 11);
 grid on;
 
 yyaxis right;
 plot(t_days, E_specific / 1e8, 'r--', 'LineWidth', 2.0);
-ylabel('比机械能 $\mathcal{E}$ ($10^8$ J/kg)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Specific Energy $\mathcal{E}$ ($10^8$ J/kg)', 'Interpreter', 'latex', 'FontSize', 11);
 
-xlabel('推进运行时间 (天)', 'Interpreter', 'latex', 'FontSize', 11);
-title('轨道能量增长与空间距离扩展时序图', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Thrust Duration $t$ (days)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Orbital Expansion and Energy Growth', 'Interpreter', 'latex', 'FontSize', 12);
 
 exportgraphics(fig, 'orbital_result.png', 'Resolution', 300);
 fprintf('  [完成] 图表已无损导出至 orbital_result.png (300 DPI)\n\n');

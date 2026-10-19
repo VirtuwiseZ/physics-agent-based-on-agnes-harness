@@ -85,19 +85,19 @@ fft_f = (0:floor(N_fft/2)-1) * (Fs / N_fft);
 %% 5. 学术出版级出图 (时域多通道轨迹 + 频域幅频响应)
 fprintf('[Step 4] 正在绘制学术级振动与频谱图...\n');
 
-fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500]);
+fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500], 'Visible', 'off');
 tiled = tiledlayout(1, 2, 'Padding', 'compact', 'TileSpacing', 'compact');
 
 % 子图 1: 多质点耦合位移时域演化
 nexttile(1);
-plot(t_vib, x1 * 1000, 'b-', 'LineWidth', 1.8, 'DisplayName', '质点 1 ($m_1$)');
+plot(t_vib, x1 * 1000, 'b-', 'LineWidth', 1.8, 'DisplayName', 'Mass 1 ($m_1$)');
 hold on;
-plot(t_vib, x2 * 1000, 'r--', 'LineWidth', 1.8, 'DisplayName', '质点 2 ($m_2$)');
-plot(t_vib, x3 * 1000, 'g:', 'LineWidth', 1.8, 'DisplayName', '质点 3 ($m_3$)');
+plot(t_vib, x2 * 1000, 'r--', 'LineWidth', 1.8, 'DisplayName', 'Mass 2 ($m_2$)');
+plot(t_vib, x3 * 1000, 'g:', 'LineWidth', 1.8, 'DisplayName', 'Mass 3 ($m_3$)');
 grid on; box on;
-xlabel('时间 $t$ ($\mathrm{s}$)', 'Interpreter', 'latex', 'FontSize', 11);
-ylabel('振动位移 ($\mathrm{mm}$)', 'Interpreter', 'latex', 'FontSize', 11);
-title(sprintf('共振激励下各质点时域位移响应 ($f_{\\mathrm{drive}}=%.2f$ Hz)', drive_freq), ...
+xlabel('Time $t$ (s)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Displacement (mm)', 'Interpreter', 'latex', 'FontSize', 11);
+title(sprintf('Forced Vibration Response ($f_{\\mathrm{drive}}=%.2f$ Hz)', drive_freq), ...
       'Interpreter', 'latex', 'FontSize', 12);
 legend('Location', 'northeast', 'Interpreter', 'latex');
 
@@ -105,14 +105,14 @@ legend('Location', 'northeast', 'Interpreter', 'latex');
 nexttile(2);
 plot(fft_f, fft_mag * 1000, 'k-', 'LineWidth', 2.0);
 hold on;
-xline(freq_hz(1), 'r--', sprintf('模态 1: %.1f Hz', freq_hz(1)), 'Interpreter', 'latex');
-xline(freq_hz(2), 'm--', sprintf('模态 2: %.1f Hz', freq_hz(2)), 'Interpreter', 'latex');
-xline(freq_hz(3), 'c--', sprintf('模态 3: %.1f Hz', freq_hz(3)), 'Interpreter', 'latex');
+xline(freq_hz(1), 'r--', sprintf('Mode 1: %.1f Hz', freq_hz(1)), 'Interpreter', 'latex');
+xline(freq_hz(2), 'm--', sprintf('Mode 2: %.1f Hz', freq_hz(2)), 'Interpreter', 'latex');
+xline(freq_hz(3), 'c--', sprintf('Mode 3: %.1f Hz', freq_hz(3)), 'Interpreter', 'latex');
 xlim([0, max(freq_hz) * 1.5]);
 grid on; box on;
-xlabel('频率 $f$ ($\mathrm{Hz}$)', 'Interpreter', 'latex', 'FontSize', 11);
-ylabel('傅里叶振幅谱 ($\mathrm{mm}$)', 'Interpreter', 'latex', 'FontSize', 11);
-title('稳态响应离散傅里叶变换 (FFT) 频谱峰值', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Frequency $f$ (Hz)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('FFT Amplitude (mm)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Steady-State FFT Amplitude Spectrum', 'Interpreter', 'latex', 'FontSize', 12);
 
 exportgraphics(fig, 'vibration_acoustics_result.png', 'Resolution', 300);
 fprintf('  [完成] 振动图表已无损导出至 vibration_acoustics_result.png (300 DPI)\n\n');

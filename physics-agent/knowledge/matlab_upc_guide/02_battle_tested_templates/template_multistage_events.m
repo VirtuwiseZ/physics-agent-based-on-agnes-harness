@@ -114,7 +114,7 @@ else
 end
 
 %% 4. 学术论文级分段着色图表绘制
-fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500]);
+fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500], 'Visible', 'off');
 tiled = tiledlayout(1, 2, 'Padding', 'compact', 'TileSpacing', 'compact');
 
 % 子图 1: 高度演化与阶段分界
@@ -123,32 +123,32 @@ idx1 = (stage_tags == 1);
 idx2 = (stage_tags == 2);
 idx3 = (stage_tags == 3);
 
-plot(t_all(idx1), y_all(idx1, 1)/1000, 'r-', 'LineWidth', 2.2, 'DisplayName', '阶段1: 自由落体');
+plot(t_all(idx1), y_all(idx1, 1)/1000, 'r-', 'LineWidth', 2.2, 'DisplayName', 'Stage 1: Freefall');
 hold on;
-plot(t_all(idx2), y_all(idx2, 1)/1000, 'b-', 'LineWidth', 2.2, 'DisplayName', '阶段2: 减速伞');
-plot(t_all(idx3), y_all(idx3, 1)/1000, 'g-', 'LineWidth', 2.2, 'DisplayName', '阶段3: 主降落伞');
-yline(params.alt_drogue/1000, 'k--', '减速伞开伞点', 'Interpreter', 'latex', 'LabelHorizontalAlignment', 'left');
-yline(params.alt_main/1000, 'k:', '主伞开伞点', 'Interpreter', 'latex', 'LabelHorizontalAlignment', 'left');
+plot(t_all(idx2), y_all(idx2, 1)/1000, 'b-', 'LineWidth', 2.2, 'DisplayName', 'Stage 2: Drogue Chute');
+plot(t_all(idx3), y_all(idx3, 1)/1000, 'g-', 'LineWidth', 2.2, 'DisplayName', 'Stage 3: Main Chute');
+yline(params.alt_drogue/1000, 'k--', 'Drogue Deploy', 'Interpreter', 'latex', 'LabelHorizontalAlignment', 'left');
+yline(params.alt_main/1000, 'k:', 'Main Deploy', 'Interpreter', 'latex', 'LabelHorizontalAlignment', 'left');
 grid on; box on;
-xlabel('时间 t (s)', 'Interpreter', 'latex', 'FontSize', 11);
-ylabel('海拔高度 h (km)', 'Interpreter', 'latex', 'FontSize', 11);
-title('多阶段下落高度时序轨迹', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Time $t$ (s)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Altitude $h$ (km)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Multi-Stage Descent Profile', 'Interpreter', 'latex', 'FontSize', 12);
 legend('Location', 'northeast', 'Interpreter', 'latex');
 
 % 子图 2: 速度剖面与过载冲击曲线 (双轴对比)
 nexttile(2);
 yyaxis left;
 plot(t_all, abs(y_all(:, 2)), 'b-', 'LineWidth', 2.0);
-ylabel('下落速率 |v| (m/s)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Descent Speed $|v|$ (m/s)', 'Interpreter', 'latex', 'FontSize', 11);
 grid on;
 
 yyaxis right;
 plot(t_all, g_force, 'm-', 'LineWidth', 1.8);
-yline(10.0, 'r--', '10g 危险阈值', 'Interpreter', 'latex');
-ylabel('过载系数 (g-force)', 'Interpreter', 'latex', 'FontSize', 11);
+yline(10.0, 'r--', '10g Safety Limit', 'Interpreter', 'latex');
+ylabel('Load Factor (g-force)', 'Interpreter', 'latex', 'FontSize', 11);
 
-xlabel('时间 t (s)', 'Interpreter', 'latex', 'FontSize', 11);
-title('速度演化与瞬时过载响应 (双 Y 轴对比)', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Time $t$ (s)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Speed Decay and Deceleration G-force', 'Interpreter', 'latex', 'FontSize', 12);
 
 exportgraphics(fig, 'multistage_result.png', 'Resolution', 300);
 fprintf('\n  [完成] 仿真图表已无损导出至 multistage_result.png (300 DPI)\n\n');

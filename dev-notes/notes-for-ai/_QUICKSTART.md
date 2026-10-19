@@ -50,13 +50,20 @@ git status
 
 ## 三、 轻装作业区：本地 MATLAB R2023b 静默运行
 
-在无图形界面的沙盒环境中，运行本地 MATLAB 仿真脚本的标准命令：
+在 Windows 沙盒与无图形界面环境中，运行本地 MATLAB 仿真脚本的标准命令：
 
 ```powershell
-# 重定向配置缓存至工作区内部目录，杜绝 AppData 权限越权拦截
+# 1. 强制重定向配置与遥测缓存至工作区内部，彻底杜绝 mwddux_logging.dll 写入 AppData 触发的 0xc0000005 访问违规崩溃
+$env:LOCALAPPDATA = "E:\agnes-harness\.matlab_localappdata"
+$env:APPDATA      = "E:\agnes-harness\.matlab_appdata"
 $env:MATLAB_PREFDIR = "E:\agnes-harness\.matlab_prefs"
-& "D:\matlab\Matlab 2023b 64bit\bin\matlab.exe" -batch "run('path/to/script.m'); exit;"
+
+# 2. 推荐通过 addpath 载入脚本目录并直接调用函数/脚本名（保持工作区根目录为当前 pwd）
+# 注意：避免使用 run('path/to/file.m')，因 run 会临时切换 pwd 至子目录，可能遭遇沙盒未继承写权限拦截
+& "D:\matlab\Matlab 2023b 64bit\bin\matlab.exe" -batch "addpath('physics-agent/knowledge/matlab_upc_guide/02_battle_tested_templates'); template_ballistics_shooting; exit(0);"
 ```
+
+> **注意（UPC 英文绘图准则）**：MATLAB 内置 LaTeX 解释器不支持中文字符。所有图表中的 `xlabel`、`title`、`legend` 等凡声明 `'Interpreter', 'latex'` 的字符串必须严格使用英文与 LaTeX 数学语法（如 `Downrange $X$ (m)`），同时完全符合 UPC 英文论文出版规范。
 
 ---
 

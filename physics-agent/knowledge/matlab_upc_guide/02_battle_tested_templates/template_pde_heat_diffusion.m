@@ -47,7 +47,7 @@ fprintf('  [完成] PDE 求解完成，最终中心温度: %.2f K, 边界温度:
 %% 4. 学术论文级双联出图 (3D时空曲面 + 关键时刻截面曲线)
 fprintf('[Step 2] 正在绘制学术级 PDE 时空演化图...\n');
 
-fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500]);
+fig = figure('Color', 'w', 'Position', [100, 100, 1100, 500], 'Visible', 'off');
 tiled = tiledlayout(1, 2, 'Padding', 'compact', 'TileSpacing', 'compact');
 
 % 子图 1: 3D 瞬态时空温度分布曲面
@@ -56,14 +56,14 @@ nexttile(1);
 surf(X_grid, T_grid, T_solution, 'EdgeColor', 'none');
 colormap(turbo);
 cbar = colorbar;
-cbar.Label.String = '温度 $T$ ($\mathrm{K}$)';
+cbar.Label.String = 'Temperature $T$ (K)';
 cbar.Label.Interpreter = 'latex';
 cbar.Label.FontSize = 11;
 view(35, 30); grid on; box on;
-xlabel('空间位置 $x$ ($\mathrm{m}$)', 'Interpreter', 'latex', 'FontSize', 11);
-ylabel('时间 $t$ ($\mathrm{hours}$)', 'Interpreter', 'latex', 'FontSize', 11);
-zlabel('温度 $T(x,t)$ ($\mathrm{K}$)', 'Interpreter', 'latex', 'FontSize', 11);
-title('瞬态热传导时空演化三维曲面', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Position $x$ (m)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Time $t$ (hours)', 'Interpreter', 'latex', 'FontSize', 11);
+zlabel('Temperature $T(x,t)$ (K)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Transient Temperature Field $T(x,t)$', 'Interpreter', 'latex', 'FontSize', 12);
 
 % 子图 2: 关键时刻空间温度截面曲线族
 nexttile(2);
@@ -77,11 +77,11 @@ for k = 1:length(time_slices)
     plot(x_mesh, T_solution(idx, :), 'LineWidth', 2.0, 'Color', colors(k, :), ...
          'DisplayName', sprintf('$t = %.1f\\;\\mathrm{h}$', t_hrs));
 end
-yline(p.T_ambient, 'k--', '环境对流温度', 'Interpreter', 'latex');
+yline(p.T_ambient, 'k--', 'Ambient $T_{\infty}$', 'Interpreter', 'latex');
 grid on; box on;
-xlabel('空间位置 $x$ ($\mathrm{m}$)', 'Interpreter', 'latex', 'FontSize', 11);
-ylabel('温度 $T$ ($\mathrm{K}$)', 'Interpreter', 'latex', 'FontSize', 11);
-title('不同演化时刻沿径向空间温度剖面', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Position $x$ (m)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Temperature $T$ (K)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Radial Temperature Profiles over Time', 'Interpreter', 'latex', 'FontSize', 12);
 legend('Location', 'northeast', 'Interpreter', 'latex');
 
 exportgraphics(fig, 'pde_diffusion_result.png', 'Resolution', 300);

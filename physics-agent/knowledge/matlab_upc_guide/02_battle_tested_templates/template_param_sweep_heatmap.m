@@ -59,7 +59,7 @@ fprintf('  真空中经典最优角为 45.0 度；在大气阻力下最优仰角
 %% 4. 学术论文级双联热力/等高线相图绘制
 fprintf('\n[Step 2] 正在绘制学术级热力相图与参数可行域...\n');
 
-fig = figure('Color', 'w', 'Position', [100, 100, 1150, 500]);
+fig = figure('Color', 'w', 'Position', [100, 100, 1150, 500], 'Visible', 'off');
 tiled = tiledlayout(1, 2, 'Padding', 'compact', 'TileSpacing', 'compact');
 
 % 子图 1: 射程响应云图 + 等高线标注 + 最优仰角脊线
@@ -68,22 +68,22 @@ nexttile(1);
 clabel(C1, h1, 'FontSize', 9, 'Color', 'k', 'LabelSpacing', 200); % 标注等高线数值
 colormap(turbo);
 cbar1 = colorbar;
-cbar1.Label.String = '水平射程 (m)';
+cbar1.Label.String = 'Downrange (m)';
 cbar1.Label.Interpreter = 'latex';
 cbar1.Label.FontSize = 11;
 
 hold on;
 % 叠加绘制最优发射角脊线
-plot(v0_vec, optimal_thetas, 'w--', 'LineWidth', 2.5, 'DisplayName', '最大射程脊线');
-plot(v0_vec, 45 * ones(size(v0_vec)), 'k:', 'LineWidth', 1.5, 'DisplayName', '无阻力参考角 (45°)');
+plot(v0_vec, optimal_thetas, 'w--', 'LineWidth', 2.5, 'DisplayName', 'Max Range Ridge');
+plot(v0_vec, 45 * ones(size(v0_vec)), 'k:', 'LineWidth', 1.5, 'DisplayName', 'Vacuum Optimal ($45^\circ$)');
 
 % 标注目标射程 1200m 等高线 (高亮展示)
-contour(V0_grid, Theta_grid, Range_grid, [1200, 1200], 'r-', 'LineWidth', 2.5, 'DisplayName', '1200m 目标等高线');
+contour(V0_grid, Theta_grid, Range_grid, [1200, 1200], 'r-', 'LineWidth', 2.5, 'DisplayName', '1200m Target Contour');
 
 grid on; box on;
-xlabel('炮口初速 $v_0$ (m/s)', 'Interpreter', 'latex', 'FontSize', 11);
-ylabel('发射仰角 $\theta$ (deg)', 'Interpreter', 'latex', 'FontSize', 11);
-title('全域射程分布云图与 1200m 命中解集', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Muzzle Velocity $v_0$ (m/s)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Launch Angle $\theta$ (deg)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Range Map and 1200m Solution Contour', 'Interpreter', 'latex', 'FontSize', 12);
 legend('Location', 'northwest', 'Interpreter', 'latex');
 
 % 子图 2: 空中滞空飞行时间云图
@@ -92,14 +92,14 @@ nexttile(2);
 clabel(C2, h2, 'FontSize', 9, 'Color', 'k', 'LabelSpacing', 200);
 colormap(turbo);
 cbar2 = colorbar;
-cbar2.Label.String = '飞行时间 (s)';
+cbar2.Label.String = 'Flight Time (s)';
 cbar2.Label.Interpreter = 'latex';
 cbar2.Label.FontSize = 11;
 
 grid on; box on;
-xlabel('炮口初速 $v_0$ (m/s)', 'Interpreter', 'latex', 'FontSize', 11);
-ylabel('发射仰角 $\theta$ (deg)', 'Interpreter', 'latex', 'FontSize', 11);
-title('飞行滞空时间分布 (s)', 'Interpreter', 'latex', 'FontSize', 12);
+xlabel('Muzzle Velocity $v_0$ (m/s)', 'Interpreter', 'latex', 'FontSize', 11);
+ylabel('Launch Angle $\theta$ (deg)', 'Interpreter', 'latex', 'FontSize', 11);
+title('Time of Flight Distribution', 'Interpreter', 'latex', 'FontSize', 12);
 
 exportgraphics(fig, 'param_sweep_heatmap.png', 'Resolution', 300);
 fprintf('  [完成] 双联相图已无损导出至 param_sweep_heatmap.png (300 DPI)\n\n');
