@@ -51,24 +51,21 @@
    - 获得第一批定量结果与时序曲线；
    - 暴露系统核心矛盾，为后续高保真模型确立对比参考基准（Benchmark）。
 
-### Phase 3：MATLAB R2023b 高保真建模、数值仿真与逆向优化 (T+12h ~ T+28h)
-1. **算法与模板匹配**：对照 `physics-agent/knowledge/matlab_upc_guide/README.md` 选取金牌模板：
-   - 大气弹道/逆向击中：`template_ballistics_shooting.m` (`ode113` + `fzero`)；
-   - 多级事件/阶跃动力学：`template_multistage_events.m` (`ode45` + `odeset('Events')`)；
-   - 连续推力轨道：`template_orbital_continuous.m` (`ode113` + 守恒量检验)；
-   - 参数敏感性云图：`template_param_sweep_heatmap.m` (`meshgrid` + `contourf`)；
-   - 阵风扰动/蒙特卡洛：`template_monte_carlo.m` (2000点抽样 + 95% 置信椭圆)；
-   - 瞬态导热/气体扩散：`template_pde_heat_diffusion.m` (`pdepe`)；
-   - 耦合振动/声学共振：`template_vibration_acoustics.m` (`eig` + `ode45` + `fft`)。
-2. **建模质量核心控制点**：
+### Phase 3：MATLAB R2023b 高保真建模、数值仿真与选手交互 (T+12h ~ T+28h)
+1. **算法与模板匹配**：对照 `physics-agent/knowledge/matlab_upc_guide/README.md` 选取 10 大战备模板（涵盖质点弹道、刚体姿态、电磁粒子漂移、波动光学衍射、连续轨道、多阶段跃迁、瞬态热传导、耦合振动等）；
+2. **面向人类选手的代码注释与多标签页联动（Human-Centric Scripting）**：
+   - **自动唤起代码编辑器**：脚本生成后，指令通知 MATLAB 执行 `edit('<script_name>.m')`，在选手桌面的 MATLAB Editor 中像浏览器标签页一样自动弹出并高亮，方便选手与程序手快速审阅；
+   - **工作区变量隔离**：脚本头部统一定义 `clearvars; clc;`，确保多脚本在同一 MATLAB 会话中运行互不串味污染；
+   - **四段式导读注释**：显式划分【头部功能卡片】、【可调物理参数与常量区】、【微观物理定律展开说明】与【关键断点预期（Debug Hints）】，杜绝无注释代码，方便选手快速上手调参和断点单步调试。
+3. **建模质量核心控制点**：
    - 环境分层机理：高空参数采用国际标准大气分层（ISA）与粘度温度修正（Sutherland公式），不使用恒定常数场；
    - 终止边界严格事件截断：使用 `odeset('Events')` 零点交叉检测，不使用固定时间硬编码；
    - 逆向求解数值求根：使用 `fzero` 或优化函数确定关键参数；
    - 编码规范：注意向量化点乘运算，避免数组维度报错与内存浪费。
-3. **深入分析要求**：
+4. **深入分析要求**：
    - 避免仅交付孤立数值，应展开参数敏感性分析（如关键参数扫描与二维等高线图）；
    - 提取系统极值、最优区间或临界阈值；
-   - 图表导出采用标准英文 LaTeX 标注与矢量/高分辨率格式。
+   - 图表导出严格遵循 `05_paper_figure_recipes.md`，采用标准英文 LaTeX 标注与 `exportgraphics(gcf, 'xxx.png', 'Resolution', 300)` 出版级导出。
 
 ### Phase 4：Word 论文组织与 AI 过程同行评审 (T+28h ~ T+44h)
 1. **基于标准 Word 模板写作**：
