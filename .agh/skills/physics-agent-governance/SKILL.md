@@ -23,30 +23,24 @@ Before executing any physics modeling, analytical derivation, or numerical compu
   4. **免重型外壳直接呈现**：直接在会话窗中以排版优美的 Markdown/LaTeX 完整交付，可选调用轻量 Python 脚本进行数值验算或参数作图辅助教学。无需强制走 Node 4 HTML 编译流程。
 
 ### Mode B：UPC 竞赛与科研攻坚模式 (UPC & Research)
-- **触发情境**：国际大学生物理竞赛 (UPC)、现实复杂系统物理建模、微分方程数值求解、多参数灵敏度探索；
-- **核心原则**：严格执行 6 节点流水线（Node 0 $\to$ Node 4），产物全部落入 `physics-agent/runtime/<task-slug>/` 专属子目录，通过 `trace_visualizer.py` 编译生成 100% 离线自包含双栏交互报告。
+- **触发情境**：国际大学生物理竞赛 (UPC 48h)、现实复杂系统物理建模、微分方程数值求解、多参数灵敏度探索；
+- **核心原则与交付形态**：
+  1. **主航道交付形态（标准参赛与辅导模式）**：
+     - **计算与出图引擎**：优先调用 MATLAB R2023b 批处理与 10 大战备模板，导出 300 DPI 纯英文 LaTeX 学术科研图表；
+     - **论文撰写与辅导**：人类在 `UPC_Paper_Standard_Template.docx` 中撰写，Agent 提供分节草稿、数学状态空间方程、参数表与同行评审（Peer Review）；
+     - **轻量透明**：禁止在前期强制创建重型状态机与占位文件，将注意力集中在物理破题、特征无量纲数与基线模型构建上。
+  2. **备用交付形态（离线单文件 HTML 交互报告）**：
+     - 仅当人类明确要求“编译离线 HTML 报告”时，才调用 `trace_visualizer.py` 生成自包含双栏交互报告。日常推演切勿被 HTML 渲染脚本绑架。
 
 ---
 
-## 2. 竞赛科研模式的 6 节点流水线指针
+## 2. 竞赛科研模式的五阶段协同工作流
 
-1. **Node 0 (State Check)**：读取 `physics-state-check`。初始化 `physics-agent/runtime/<task-slug>/problem_state.json`，隔绝历史任务；
-2. **Three Defense Lines**：读取 `physics-defense-lines`。数值计算前必须跑通 `dimensional_gate.py`（量纲门）与 `boundary_gate.py`（边界门）；
-3. **Node 1 / 1.5 / 2a / 2b (Pipeline)**：读取 `physics-pipeline`。
-   - Node 1：第一性解构、提炼一句话核心目标、费米数量级先行估算；
-   - Node 1.5：物理常数标准库与权威数据源选用；
-   - Node 2a：八大物理板块算法工具谱系选用，最简基线模型（V0.1）优先；
-   - Node 2b：调用 Python 独立求解，发掘超越单一数字的五大科研深度；
-4. **Auditability & Trace**：读取 `physics-auditability`。写入状态机后即刻校验，调用 `audit_log.py` 记录面向用户的简体中文说明，现场脚本生成 `runlog.py` 资产文件；
-5. **Node 2.7 (Charting)**：读取 `physics-report-charting`。绘制 9 种科研级静态图表或交互图表，零遮挡图例设计；
-6. **Node 3 (Report Writing)**：读取 `physics-report-writing`。遵守八章学术论文结构与七条行文铁律，严禁自我标榜与内部字段名透传；
-7. **Node 4 (Trace Visualizer Render & Quality Loop)**：
-   - 必须通过 `trace_visualizer.py` 编译生成 HTML 单文件：
-     `pwsh(command="python physics-agent/hooks/trace_visualizer.py --trace ... --report ... --state ... --out ...", description="Compile offline physics report HTML")`；
-   - 绝对禁止 Agent 私自手搓伪造静态 HTML；
-   - 交付前强制自检：
-     1. `python physics-agent/hooks/skill_bom_check.py`；
-     2. `python physics-agent/hooks/report_quality_check.py --report ... --html ...`。
+1. **Phase 1：破题与机制解构**：提取一句话攻坚课题，区分主要物理效应与微扰项，估算特征尺度与特征无量纲数 ($Re, Ma, Kn, Pr$)，判定主导物理区态；
+2. **Phase 2：Version 0.1 最简基线模型**：构建最简解析或简易数值基准（Benchmark），快速算得第一批数量级指标，暴露核心物理矛盾；
+3. **Phase 3：MATLAB 高保真仿真与参数优化**：匹配 `matlab_upc_guide` 中 10 大战备模版，引入环境分层与事件截断，执行二维参数扫描（`meshgrid`）与求根优化（`fzero`），导出 300 DPI 矢量质感图表；
+4. **Phase 4：Word 学术论文草拟与过程同行评审**：基于 `UPC_Paper_Standard_Template.docx` 组织八章学术内容，进行物理严密性、量纲平衡与证据链审查；
+5. **Phase 5：极限自洽检验与封包**：检验极端退化极限（如阻力归零退化为解析解）、守恒量相对漂移量化、有效数字与单位全篇一致性复核。
 
 ---
 
