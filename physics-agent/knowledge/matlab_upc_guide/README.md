@@ -53,8 +53,11 @@
 | 题目物理板块 | 典型关键词与赛题特征 | 物理主导效应与关键控制方程 | MATLAB 推荐算法与求解器 | 知识库匹配模版 / 文件 |
 | :--- | :--- | :--- | :--- | :--- |
 | **大气弹道与高速气动力学** | 火炮(2025B)、跳伞(2023A)、足球(2022B)、水弹(2014B)、乒乓球(2012B) | • 变密度大气 $\rho(z)$<br>• 跨音速阻力危机 $C_D(M, Re)$<br>• 马格努斯效应 $\vec{\omega}\times\vec{v}$<br>• 三维风场矢量扰动 | • **`ode113` / `ode45`** 高阶积分<br>• **`odeset('Events')`** 落地点/触地截断<br>• **`fzero`** 打靶法反求射角/初速 | `02_battle_tested_templates/`<br>[`template_ballistics_shooting.m`](02_battle_tested_templates/template_ballistics_shooting.m) |
+| **刚体姿态动力学与定点转动** | 卫星翻滚、非对称刚体旋转(贾尼别科夫效应)、自旋稳定、碰撞反弹 | • 欧拉动力学方程 $\mathbf{I}\dot{\vec{\omega}} + \vec{\omega}\times(\mathbf{I}\vec{\omega})=\vec{M}$<br>• 欧拉角/四元数运动学<br>• 动能与角动量模长不变量校验 | • **`ode45`** 耦合动力学高精度积分<br>• 守恒量数值相对漂移监控<br>• 相空间角动量轨迹绘制 | `02_battle_tested_templates/`<br>[`template_rigid_body_attitude.m`](02_battle_tested_templates/template_rigid_body_attitude.m) |
+| **空间电磁场与复合场粒子漂移** | 托卡马克磁约束、磁镜捕获、正交 E×B 漂移、范艾伦带、带电粒子加速 | • 洛伦兹力方程 $m\dot{\vec{v}} = q(\vec{E} + \vec{v}\times\vec{B})$<br>• 引导中心运动与绝热不变量（磁矩 $\mu$）<br>• 麦克斯韦无散场约束 $\nabla\cdot\vec{B}=0$ | • **`ode45` / `ode113`**（高精度 `RelTol: 1e-8`）<br>• 绝热不变量守恒性时序监控<br>• 3D 螺旋回旋与磁镜捕获轨迹 | `02_battle_tested_templates/`<br>[`template_lorentz_particle_drift.m`](02_battle_tested_templates/template_lorentz_particle_drift.m) |
 | **天体引力与连续推力轨道** | 土星推进(2020A)、小行星撞击/偏转(2022A/2021B)、光帆(2018A)、木星引力弹弓(2013A) | • 万有引力与多体引力场<br>• 齐奥尔科夫斯基变质量方程 $\dot{m}=-T/(I_{sp}g_0)$<br>• 轨道能量与角动量守恒 | • **`ode113`**（设置 `RelTol: 1e-9`）<br>• 守恒量数值漂移检验<br>• 开普勒轨道与打靶变轨 | `02_battle_tested_templates/`<br>[`template_orbital_continuous.m`](02_battle_tested_templates/template_orbital_continuous.m) |
 | **多阶段动力学与瞬态事件** | 太空跳伞多级开伞(2023A)、蹦床跳跃(2023B)、投石机释放(2010B)、篮球碰撞(2011B) | • 系统方程在特定时刻发生离散跃迁<br>• 碰撞能量恢复系数 $e$<br>• 人体过载极限加速度 $a_{max}$ | • 多级链式 **`ode45`**<br>• 状态连续性继承：$y_{0, k+1} = y_{end, k}$<br>• 阶跃事件函数阵列 | `02_battle_tested_templates/`<br>[`template_multistage_events.m`](02_battle_tested_templates/template_multistage_events.m) |
+| **波动光学与干涉衍射强度分布** | 单缝/多缝夫琅禾费衍射、圆孔衍射艾里斑(瑞利判据)、光学薄膜干涉、衍射光栅 | • 标量波惠更斯-菲涅耳积分<br>• 贝塞尔函数 $J_1(u)$ 描述圆孔光强场<br>• 归一化光强截面与对数衰减 | • **`besselj`** 一阶贝塞尔特殊函数<br>• **`imagesc`** 2D 衍射斑伽马增强云图<br>• **`semilogy`** 1D 主极大与次级衍射环对比 | `02_battle_tested_templates/`<br>[`template_wave_optics_diffraction.m`](02_battle_tested_templates/template_wave_optics_diffraction.m) |
 | **瞬态传导与气体扩散** | 空间站小孔漏气(2024A)、火星大气演化(2021A)、堆肥堆导热(2018B)、行星地热(2012A) | • 傅里叶导热偏微分方程 (PDE)<br>• 连续性方程与稀薄气体出流<br>• 空间半离散化导热方程 | • **`pdepe`**（一维瞬态偏微分方程）<br>• 空间半离散化（MOL）+ **`ode15s`**<br>• 3D时空演化瀑布曲面 | `02_battle_tested_templates/`<br>[`template_pde_heat_diffusion.m`](02_battle_tested_templates/template_pde_heat_diffusion.m) |
 | **耦合振动与声学共振** | Sasando乐器(2025A)、蹦床多刚体弹跳(2023B)、浅水重力波(2021B) | • 多自由度质量-阻尼-刚度矩阵 $M\ddot{x}+C\dot{x}+Kx=F$<br>• 亥姆霍兹共鸣腔方程<br>• 稳态受迫振动与主振型 | • **`eig`** 模态频率与振型分解<br>• **`ode45`** 状态空间受迫时域积分<br>• **`fft`** 稳态离散傅里叶频域提取 | `02_battle_tested_templates/`<br>[`template_vibration_acoustics.m`](02_battle_tested_templates/template_vibration_acoustics.m) |
 | **参数敏感性扫描与全域相图** | “评估不同风速/高度的影响”、“寻找最佳策略”、“参数容差范围” | • 双参数/多参数全空间遍历<br>• 临界相变与可行域边界提取 | • **`meshgrid`** 网格矩阵构建<br>• **`tiledlayout` + `contourf`** 等高线<br>• **`exportgraphics`** 导出 300 DPI | `02_battle_tested_templates/`<br>[`template_param_sweep_heatmap.m`](02_battle_tested_templates/template_param_sweep_heatmap.m) |
@@ -87,14 +90,17 @@
 ## 四、 本知识库详细资产导航与使用方法
 
 - **[01_solver_matrix.md](01_solver_matrix.md)**：MATLAB 求解器深度矩阵。详细对比 `ode45`、`ode113`、`ode15s` 的数值步长控制、精度容差 (`RelTol`/`AbsTol`) 与刚性判定。
-- **[02_battle_tested_templates/](02_battle_tested_templates/)**：七套即插即用的金牌级实战 `.m` 脚本：
+- **[02_battle_tested_templates/](02_battle_tested_templates/)**：十套即插即用的核心物理范式实战 `.m` 脚本：
   1. `template_ballistics_shooting.m`：三维外弹道 + 变密度大气 + 跨音速激波 + 打靶法反求；
-  2. `template_multistage_events.m`：多阶段物理演化 + 事件函数阵列 + 状态连续继承；
-  3. `template_orbital_continuous.m`：连续小推力变轨 + 变质量火箭方程 + 机械能/角动量守恒校验；
-  4. `template_param_sweep_heatmap.m`：双参网格扫描 + `tiledlayout` 现代排版 + 等高线与可行域相图；
-  5. `template_monte_carlo.m`：高斯扰动随机风场 + 散布椭圆 + 命中概率直方图；
-  6. `template_pde_heat_diffusion.m`：一维瞬态偏微分方程 (`pdepe`) + 3D 时空温度分布瀑布图；
-  7. `template_vibration_acoustics.m`：多自由度耦合振动模态分解 (`eig`) + 受迫振动时域积分 + FFT 频谱分析。
+  2. `template_rigid_body_attitude.m`：刚体欧拉动力学方程 + 欧拉角运动学 + 动能/角动量不变量校验；
+  3. `template_lorentz_particle_drift.m`：带电粒子洛伦兹力 + 磁镜引导中心漂移 + 磁矩绝热不变量；
+  4. `template_wave_optics_diffraction.m`：圆孔夫琅禾费衍射 (besselj) + 艾里斑强度云图与对数截面；
+  5. `template_multistage_events.m`：多阶段物理演化 + 事件函数阵列 + 状态连续继承；
+  6. `template_orbital_continuous.m`：连续小推力变轨 + 变质量火箭方程 + 机械能/角动量守恒校验；
+  7. `template_param_sweep_heatmap.m`：双参网格扫描 + `tiledlayout` 现代排版 + 等高线与可行域相图；
+  8. `template_monte_carlo.m`：高斯扰动随机风场 + 散布椭圆 + 命中概率直方图；
+  9. `template_pde_heat_diffusion.m`：一维瞬态偏微分方程 (`pdepe`) + 3D 时空温度分布瀑布图；
+  10. `template_vibration_acoustics.m`：多自由度耦合振动模态分解 (`eig`) + 受迫振动时域积分 + FFT 频谱分析。
 - **[03_physics_submodels.md](03_physics_submodels.md)**：高频物理底层子函数代码速查（ISA大气、萨瑟兰粘度、跨音速阻力曲线、马格努斯力、万有引力场、小孔出流）。
 - **[04_modern_matlab_style_guide.md](04_modern_matlab_style_guide.md)**：现代 MATLAB R2023b 规范与避坑指南（点乘点除防坑、匿名函数句柄传参、报错急救）。
 - **[05_paper_figure_recipes.md](05_paper_figure_recipes.md)**：专为 UPC 竞赛定制的学术级出图秘籍（双 Y 轴排版、LaTeX 字体解析、`exportgraphics` 300 DPI 无损导出）。
